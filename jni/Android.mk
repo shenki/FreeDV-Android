@@ -1,0 +1,27 @@
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libusb-1.0
+LOCAL_SRC_FILES := libusb-1.0/lib/$(TARGET_ARCH_ABI)/libusb-1.0.so
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/libusb-1.0/include/libusb-1.0
+LOCAL_EXPORT_LDLIBS := -llog
+include $(PREBUILT_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libfreedv
+LOCAL_LDLIBS := -llog
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/freedv
+LOCAL_SRC_FILES := freedv/codebook.c freedv/codebookd.c freedv/codebookdt.c \
+    freedv/codebookge.c freedv/codebookjnd.c freedv/codebookjvm.c \
+    freedv/codebookvqanssi.c freedv/codebookvq.c freedv/codec2.c \
+    freedv/dump.c freedv/fdmdv.c freedv/interp.c freedv/kiss_fft.c \
+    freedv/lpc.c freedv/lsp.c freedv/nlp.c freedv/pack.c freedv/phase.c \
+    freedv/postfilter.c freedv/quantise.c freedv/sine.c
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libdroidfreedv
+LOCAL_SHARED_LIBRARIES := libusb-1.0 freedv
+LOCAL_LDLIBS := -llog
+LOCAL_SRC_FILES := freedv_jni.c
+include $(BUILD_SHARED_LIBRARY)
