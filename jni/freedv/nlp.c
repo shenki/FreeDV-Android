@@ -265,7 +265,7 @@ float nlp(
 	fw[i].imag = 0.0;
     }
     for(i=0; i<m/DEC; i++) {
-	fw[i].real = nlp->sq[i*DEC]*(0.5 - 0.5*cos(2*PI*i/(m/DEC-1)));
+	fw[i].real = nlp->sq[i*DEC]*(0.5 - 0.5*cosf(2*PI*i/(m/DEC-1)));
     }
     #ifdef DUMP
     dump_dec(Fw);
@@ -436,7 +436,7 @@ float post_process_mbe(COMP Fw[], int pmin, int pmax, float gmax, COMP Sw[], COM
 
 	    for(f0=f0_start; f0<=f0_end; f0+= 2.5) {
 		e = test_candidate_mbe(Sw, W, f0);
-		bin = floor(f0); assert((bin > 0) && (bin < F0_MAX));
+		bin = floorf(f0); assert((bin > 0) && (bin < F0_MAX));
 		e_hz[bin] = e;
 		if (e < e_min) {
 		    e_min = e;
@@ -459,7 +459,7 @@ float post_process_mbe(COMP Fw[], int pmin, int pmax, float gmax, COMP Sw[], COM
 
   for(f0=f0_start; f0<=f0_end; f0+= 2.5) {
       e = test_candidate_mbe(Sw, W, f0);
-      bin = floor(f0); assert((bin > 0) && (bin < F0_MAX));
+      bin = floorf(f0); assert((bin > 0) && (bin < F0_MAX));
       e_hz[bin] = e;
       if (e < e_min) {
 	  e_min = e;
@@ -500,7 +500,7 @@ float test_candidate_mbe(
     float Wo;             /* current "test" fundamental freq. */
     int   L;
     
-    L = floor((SAMPLE_RATE/2.0)/f0);
+    L = floorf((SAMPLE_RATE/2.0)/f0);
     Wo = f0*(2*PI/SAMPLE_RATE);
 
     error = 0.0;
@@ -511,8 +511,8 @@ float test_candidate_mbe(
 	Am.real = 0.0;
 	Am.imag = 0.0;
 	den = 0.0;
-	al = ceil((l - 0.5)*Wo*FFT_ENC/TWO_PI);
-	bl = ceil((l + 0.5)*Wo*FFT_ENC/TWO_PI);
+	al = ceilf((l - 0.5)*Wo*FFT_ENC/TWO_PI);
+	bl = ceilf((l + 0.5)*Wo*FFT_ENC/TWO_PI);
 
 	/* Estimate amplitude of harmonic assuming harmonic is totally voiced */
 

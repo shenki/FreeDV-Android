@@ -161,7 +161,7 @@ void dump_Sw(COMP Sw[]) {
 
     for(i=0; i<FFT_ENC/2; i++)
 	fprintf(fsw,"%f\t",
-		10.0*log10(Sw[i].real*Sw[i].real + Sw[i].imag*Sw[i].imag));
+		10.0*log10f(Sw[i].real*Sw[i].real + Sw[i].imag*Sw[i].imag));
     fprintf(fsw,"\n");    
 }
 
@@ -179,7 +179,7 @@ void dump_Sw_(COMP Sw_[]) {
 
     for(i=0; i<FFT_ENC/2; i++)
 	fprintf(fsw_,"%f\t",
-		10.0*log10(Sw_[i].real*Sw_[i].real + Sw_[i].imag*Sw_[i].imag));
+		10.0*log10f(Sw_[i].real*Sw_[i].real + Sw_[i].imag*Sw_[i].imag));
     fprintf(fsw_,"\n");    
 }
 
@@ -197,7 +197,7 @@ void dump_Ew(COMP Ew[]) {
 
     for(i=0; i<FFT_ENC/2; i++)
 	fprintf(few,"%f\t",
-		10.0*log10(Ew[i].real*Ew[i].real + Ew[i].imag*Ew[i].imag));
+		10.0*log10f(Ew[i].real*Ew[i].real + Ew[i].imag*Ew[i].imag));
     fprintf(few,"\n");    
 }
 
@@ -564,7 +564,7 @@ void dump_E(float E) {
 	assert(fE != NULL);
     }
 
-    fprintf(fE,"%f\n", 10.0*log10(E));
+    fprintf(fE,"%f\n", 10.0*log10f(E));
 }
 
 void dump_Rk(float Rk[]) {

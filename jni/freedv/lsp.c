@@ -244,7 +244,7 @@ int lpc_to_lsp (float *a, int lpcrdr, float *freq, int nb, float delta)
     /* convert from x domain to radians */
 
     for(i=0; i<lpcrdr; i++) {
-	freq[i] = acos(freq[i]);
+	freq[i] = acosf(freq[i]);
     }
 
     return(roots);
@@ -275,10 +275,10 @@ void lsp_to_lpc(float *lsp, float *ak, int lpcrdr)
     float freq[LSP_MAX_ORDER];
     float Wp[(LSP_MAX_ORDER * 4) + 2];
     
-    /* convert from radians to the x=cos(w) domain */
+    /* convert from radians to the x=cosf(w) domain */
 
     for(i=0; i<lpcrdr; i++)
-	freq[i] = cos(lsp[i]);
+	freq[i] = cosf(lsp[i]);
 
     pw = Wp;
 

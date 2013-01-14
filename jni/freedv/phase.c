@@ -84,18 +84,18 @@ void aks_to_H(
   /* Sample magnitude and phase at harmonics */
 
   for(m=1; m<=model->L; m++) {
-    am = floor((m - 0.5)*model->Wo/r + 0.5);
-    bm = floor((m + 0.5)*model->Wo/r + 0.5);
-    b = floor(m*model->Wo/r + 0.5);
+    am = floorf((m - 0.5)*model->Wo/r + 0.5);
+    bm = floorf((m + 0.5)*model->Wo/r + 0.5);
+    b = floorf(m*model->Wo/r + 0.5);
 
     Em = 0.0;
     for(i=am; i<bm; i++)
       Em += G/(Pw[i].real*Pw[i].real + Pw[i].imag*Pw[i].imag);
-    Am = sqrt(fabs(Em/(bm-am)));
+    Am = sqrtf(fabsf(Em/(bm-am)));
 
-    phi_ = -atan2(Pw[b].imag,Pw[b].real);
-    H[m].real = Am*cos(phi_);
-    H[m].imag = Am*sin(phi_);
+    phi_ = -atan2f(Pw[b].imag,Pw[b].real);
+    H[m].real = Am*cosf(phi_);
+    H[m].imag = Am*sinf(phi_);
   }
 }
 
@@ -120,7 +120,7 @@ void aks_to_H(
    sinsusoids:
 
      for(m=1; m<=L; m++)
-       ex[n] = cos(m*Wo*n)
+       ex[n] = cosf(m*Wo*n)
 
    Note: the Octave script ../octave/phase.m is an example of this if
    you would like to try making a pulse train.
@@ -221,7 +221,7 @@ void phase_synth_zero_order(
   */
   
   ex_phase[0] += (model->Wo)*N;
-  ex_phase[0] -= TWO_PI*floor(ex_phase[0]/TWO_PI + 0.5);
+  ex_phase[0] -= TWO_PI*floorf(ex_phase[0]/TWO_PI + 0.5);
   r = TWO_PI/GLOTTAL_FFT_SIZE;
 
   for(m=1; m<=model->L; m++) {
@@ -231,7 +231,7 @@ void phase_synth_zero_order(
     if (model->voiced) {
 	//float rnd;
 
-        b = floor(m*model->Wo/r + 0.5);
+        b = floorf(m*model->Wo/r + 0.5);
 	if (b > ((GLOTTAL_FFT_SIZE/2)-1)) {
 		b = (GLOTTAL_FFT_SIZE/2)-1;
 	}
@@ -244,8 +244,8 @@ void phase_synth_zero_order(
 	jitter = 0;
 
 	//rnd = (PI/8)*(1.0 - 2.0*rand()/RAND_MAX);
-	Ex[m].real = cos(ex_phase[0]*m/* - jitter*model->Wo*m + glottal[b]*/);
-	Ex[m].imag = sin(ex_phase[0]*m/* - jitter*model->Wo*m + glottal[b]*/);
+	Ex[m].real = cosf(ex_phase[0]*m/* - jitter*model->Wo*m + glottal[b]*/);
+	Ex[m].imag = sinf(ex_phase[0]*m/* - jitter*model->Wo*m + glottal[b]*/);
     }
     else {
 
@@ -254,8 +254,8 @@ void phase_synth_zero_order(
 	   keeping it.
         */
 	float phi = TWO_PI*(float)rand()/RAND_MAX;
-        Ex[m].real = cos(phi);
-	Ex[m].imag = sin(phi);
+        Ex[m].real = cosf(phi);
+	Ex[m].imag = sinf(phi);
     }
 
     /* filter using LPC filter */
@@ -265,7 +265,7 @@ void phase_synth_zero_order(
 
     /* modify sinusoidal phase */
    
-    new_phi = atan2(A_[m].imag, A_[m].real+1E-12);
+    new_phi = atan2f(A_[m].imag, A_[m].real+1E-12);
     model->phi[m] = new_phi;
   }
 

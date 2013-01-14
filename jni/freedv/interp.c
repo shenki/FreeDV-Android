@@ -88,7 +88,7 @@ void interpolate(
     for(l=1; l<=interp->L; l++) {
 	w = l*interp->Wo;
 	log_amp = (sample_log_amp(prev, w) + sample_log_amp(next, w))/2.0;
-	interp->A[l] = pow(10.0, log_amp);
+	interp->A[l] = powf(10.0, log_amp);
     }
 }
 
@@ -111,19 +111,19 @@ float sample_log_amp(MODEL *model, float w)
 
     assert(w > 0.0); assert (w <= PI);
 
-    m = floor(w/model->Wo + 0.5);
+    m = floorf(w/model->Wo + 0.5);
     f = (w - m*model->Wo)/w;
     assert(f <= 1.0);
 
     if (m < 1) {
-	log_amp = f*log10(model->A[1] + 1E-6);
+	log_amp = f*log10f(model->A[1] + 1E-6);
     }
     else if ((m+1) > model->L) {
-	log_amp = (1.0-f)*log10(model->A[model->L] + 1E-6);
+	log_amp = (1.0-f)*log10f(model->A[model->L] + 1E-6);
     }
     else {
-	log_amp = (1.0-f)*log10(model->A[m] + 1E-6) + 
-                  f*log10(model->A[m+1] + 1E-6);
+	log_amp = (1.0-f)*log10f(model->A[m] + 1E-6) + 
+                  f*log10f(model->A[m+1] + 1E-6);
     }
 
     return log_amp;
@@ -195,7 +195,7 @@ void interpolate_lsp(
 
     /* Interpolate LPC energy in log domain */
 
-    e = pow(10.0, (log10(prev_e) + log10(next_e))/2.0);
+    e = powf(10.0, (log10f(prev_e) + log10f(next_e))/2.0);
     //printf("  interp: e: %f\n", e);
 
     /* convert back to amplitudes */
@@ -260,7 +260,7 @@ void interp_Wo(
 
 float interp_energy(float prev_e, float next_e)
 {
-    return pow(10.0, (log10(prev_e) + log10(next_e))/2.0);
+    return powf(10.0, (log10f(prev_e) + log10f(next_e))/2.0);
  
 }
 

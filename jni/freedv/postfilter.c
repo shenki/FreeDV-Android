@@ -112,7 +112,7 @@ void postfilter(
       e += model->A[m]*model->A[m];
 
   assert(e > 0.0);
-  e = 10.0*log10(e/model->L);
+  e = 10.0*log10f(e/model->L);
 
   /* If beneath threhold, update bg estimate.  The idea
      of the threshold is to prevent updating during high level
@@ -128,7 +128,7 @@ void postfilter(
   uv = 0;
   if (model->voiced)
       for(m=1; m<=model->L; m++)
-	  if (20.0*log10(model->A[m]) < (*bg_est + BG_MARGIN)) {
+	  if (20.0*log10f(model->A[m]) < (*bg_est + BG_MARGIN)) {
 	      model->phi[m] = TWO_PI*(float)rand()/RAND_MAX;
 	      uv++;
 	  }

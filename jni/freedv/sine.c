@@ -88,7 +88,7 @@ void make_analysis_window(kiss_fft_cfg fft_fwd_cfg, float w[], COMP W[])
   for(i=0; i<M/2-NW/2; i++)
     w[i] = 0.0;
   for(i=M/2-NW/2,j=0; i<M/2+NW/2; i++,j++) {
-    w[i] = 0.5 - 0.5*cos(TWO_PI*j/(NW-1));
+    w[i] = 0.5 - 0.5*cosf(TWO_PI*j/(NW-1));
     m += w[i]*w[i];
   }
   for(i=M/2+NW/2; i<M; i++)
@@ -97,7 +97,7 @@ void make_analysis_window(kiss_fft_cfg fft_fwd_cfg, float w[], COMP W[])
   /* Normalise - makes freq domain amplitude estimation straight
      forward */
 
-  m = 1.0/sqrt(m*FFT_ENC);
+  m = 1.0/sqrtf(m*FFT_ENC);
   for(i=0; i<M; i++) {
     w[i] *= m;
   }
@@ -261,7 +261,7 @@ void two_stage_pitch_refinement(MODEL *model, COMP Sw[])
   if (model->Wo > TWO_PI/P_MIN)
     model->Wo = TWO_PI/P_MIN;
 
-  model->L = floor(PI/model->Wo);
+  model->L = floorf(PI/model->Wo);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -308,7 +308,7 @@ void hs_pitch_refinement(MODEL *model, COMP Sw[], float pmin, float pmax, float 
     /* Sum harmonic magnitudes */
 
     for(m=1; m<=model->L; m++) {
-      b = floor(m*Wo/r + 0.5);
+      b = floorf(m*Wo/r + 0.5);
       E += Sw[b].real*Sw[b].real + Sw[b].imag*Sw[b].imag;
     }  
 
@@ -347,9 +347,9 @@ void estimate_amplitudes(MODEL *model, COMP Sw[], COMP W[])
 
   for(m=1; m<=model->L; m++) {
     den = 0.0;
-    am = floor((m - 0.5)*model->Wo/r + 0.5);
-    bm = floor((m + 0.5)*model->Wo/r + 0.5);
-    b = floor(m*model->Wo/r + 0.5);
+    am = floorf((m - 0.5)*model->Wo/r + 0.5);
+    bm = floorf((m + 0.5)*model->Wo/r + 0.5);
+    b = floorf(m*model->Wo/r + 0.5);
 
     /* Estimate ampltude of harmonic */
 
@@ -357,16 +357,16 @@ void estimate_amplitudes(MODEL *model, COMP Sw[], COMP W[])
     Am.real = Am.imag = 0.0;
     for(i=am; i<bm; i++) {
       den += Sw[i].real*Sw[i].real + Sw[i].imag*Sw[i].imag;
-      offset = i + FFT_ENC/2 - floor(m*model->Wo/r + 0.5);
+      offset = i + FFT_ENC/2 - floorf(m*model->Wo/r + 0.5);
       Am.real += Sw[i].real*W[offset].real;
       Am.imag += Sw[i].imag*W[offset].real;
     }
 
-    model->A[m] = sqrt(den);
+    model->A[m] = sqrtf(den);
 
     /* Estimate phase of harmonic */
 
-    model->phi[m] = atan2(Sw[b].imag,Sw[b].real);
+    model->phi[m] = atan2f(Sw[b].imag,Sw[b].real);
   }
 }
 
@@ -420,8 +420,8 @@ float est_voicing_mbe(
 	Am.real = 0.0;
 	Am.imag = 0.0;
 	den = 0.0;
-	al = ceil((l - 0.5)*Wo*FFT_ENC/TWO_PI);
-	bl = ceil((l + 0.5)*Wo*FFT_ENC/TWO_PI);
+	al = ceilf((l - 0.5)*Wo*FFT_ENC/TWO_PI);
+	bl = ceilf((l + 0.5)*Wo*FFT_ENC/TWO_PI);
 
 	/* Estimate amplitude of harmonic assuming harmonic is totally voiced */
 
@@ -448,7 +448,7 @@ float est_voicing_mbe(
 	}
     }
     
-    snr = 10.0*log10(sig/error);
+    snr = 10.0*log10f(sig/error);
     if (snr > V_THRESH)
 	model->voiced = 1;
     else
@@ -470,7 +470,7 @@ float est_voicing_mbe(
     for(l=model->L/2; l<=model->L; l++) {
 	ehigh += model->A[l]*model->A[l];
     }
-    eratio = 10.0*log10(elow/ehigh);
+    eratio = 10.0*log10f(elow/ehigh);
     dF0 = 0.0;
 
     /* Look for Type 1 errors, strongly V speech that has been
@@ -493,7 +493,7 @@ float est_voicing_mbe(
 	   double check on bg noise files
 
 	   dF0 = (model->Wo - prev_Wo)*FS/TWO_PI;
-	   if (fabs(dF0) > 15.0) 
+	   if (fabsf(dF0) > 15.0) 
 	   model->voiced = 0;
 	*/
 
@@ -583,7 +583,7 @@ void synthesise(
     }
 
     /*
-      Nov 2010 - found that synthesis using time domain cos() functions
+      Nov 2010 - found that synthesis using time domain cosf() functions
       gives better results for synthesis frames greater than 10ms.  Inverse
       FFT synthesis using a 512 pt FFT works well for 10ms window.  I think
       (but am not sure) that the problem is related to the quantisation of
@@ -602,12 +602,12 @@ void synthesise(
     for(l=1; l<=model->L; l++) {
     //for(l=model->L/2; l<=model->L; l++) {
     //for(l=1; l<=model->L/4; l++) {
-	b = floor(l*model->Wo*FFT_DEC/TWO_PI + 0.5);
+	b = floorf(l*model->Wo*FFT_DEC/TWO_PI + 0.5);
 	if (b > ((FFT_DEC/2)-1)) {
 		b = (FFT_DEC/2)-1;
 	}
-	Sw_[b].real = model->A[l]*cos(model->phi[l]);
-	Sw_[b].imag = model->A[l]*sin(model->phi[l]);
+	Sw_[b].real = model->A[l]*cosf(model->phi[l]);
+	Sw_[b].imag = model->A[l]*sinf(model->phi[l]);
 	Sw_[FFT_DEC-b].real = Sw_[b].real;
 	Sw_[FFT_DEC-b].imag = -Sw_[b].imag;
     }
@@ -617,7 +617,7 @@ void synthesise(
     kiss_fft(fft_inv_cfg, (kiss_fft_cpx *)Sw_, (kiss_fft_cpx *)sw_);
 #else
     /*
-       Direct time domain synthesis using the cos() function.  Works
+       Direct time domain synthesis using the cosf() function.  Works
        well at 10ms and 20ms frames rates.  Note synthesis window is
        still used to handle overlap-add between adjacent frames.  This
        could be simplified as we don't need to synthesise where Pn[]
@@ -625,10 +625,10 @@ void synthesise(
     */
     for(l=1; l<=model->L; l++) {
 	for(i=0,j=-N+1; i<N-1; i++,j++) {
-	    Sw_[FFT_DEC-N+1+i].real += 2.0*model->A[l]*cos(j*model->Wo*l + model->phi[l]);
+	    Sw_[FFT_DEC-N+1+i].real += 2.0*model->A[l]*cosf(j*model->Wo*l + model->phi[l]);
 	}
  	for(i=N-1,j=0; i<2*N; i++,j++)
-	    Sw_[j].real += 2.0*model->A[l]*cos(j*model->Wo*l + model->phi[l]);
+	    Sw_[j].real += 2.0*model->A[l]*cosf(j*model->Wo*l + model->phi[l]);
     }	
 #endif
 
