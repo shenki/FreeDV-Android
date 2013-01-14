@@ -8,6 +8,13 @@ LOCAL_EXPORT_LDLIBS := -llog
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := libsamplerate
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/libsamplerate
+LOCAL_SRC_FILES := libsamplerate/samplerate.c  libsamplerate/src_linear.c \
+    libsamplerate/src_sinc.c  libsamplerate/src_zoh.c
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_MODULE := libfreedv
 LOCAL_LDLIBS := -llog
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/freedv
@@ -21,7 +28,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := libdroidfreedv
-LOCAL_SHARED_LIBRARIES := libusb-1.0 freedv
+LOCAL_SHARED_LIBRARIES := libusb-1.0 freedv samplerate
 LOCAL_LDLIBS := -llog
-LOCAL_SRC_FILES := freedv_jni.c
+LOCAL_SRC_FILES := freedv_jni.c freedv_usb.c freedv_rx.c
 include $(BUILD_SHARED_LIBRARY)
