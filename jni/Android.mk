@@ -10,6 +10,7 @@ include $(PREBUILT_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libsamplerate
 LOCAL_ARM_NEON := true
+LOCAL_CFLAGS := -O3
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/libsamplerate
 LOCAL_SRC_FILES := libsamplerate/samplerate.c  libsamplerate/src_linear.c \
     libsamplerate/src_sinc.c  libsamplerate/src_zoh.c
@@ -19,6 +20,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libfreedv
 LOCAL_LDLIBS := -llog
 LOCAL_ARM_NEON := true
+LOCAL_CFLAGS := -O3
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/freedv
 LOCAL_SRC_FILES := freedv/codebook.c freedv/codebookd.c freedv/codebookdt.c \
     freedv/codebookge.c freedv/codebookjnd.c freedv/codebookjvm.c \
@@ -29,7 +31,7 @@ LOCAL_SRC_FILES := freedv/codebook.c freedv/codebookd.c freedv/codebookdt.c \
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_CFLAGS := -Wall
+LOCAL_CFLAGS := -Wall -O3
 LOCAL_MODULE := libdroidfreedv
 LOCAL_ARM_NEON := true
 LOCAL_SHARED_LIBRARIES := libusb-1.0 freedv samplerate
