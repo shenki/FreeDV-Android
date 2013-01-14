@@ -28,15 +28,20 @@
 #define UNUSED __attribute__((unused))
 
 #define LOGD(...) \
-        __android_log_print(ANDROID_LOG_DEBUG, "FreedvNative", __VA_ARGS__)
+        __android_log_print(ANDROID_LOG_DEBUG, "FreedvJNINative", __VA_ARGS__)
 #define LOGE(...) \
-        __android_log_print(ANDROID_LOG_ERROR, "FreedvNative", __VA_ARGS__)
+        __android_log_print(ANDROID_LOG_ERROR, "FreedvJNINative", __VA_ARGS__)
 
 struct app_ctx {
     int quitfd;
     int logfd;
     pthread_t usb_thread;
 };
+
+jobject audioPlaybackObj;
+jmethodID AudioPlayback_write;
+jclass AudioPlayback;
+JavaVM* java_vm;
 
 static void *usb_thread_entry(void *data) {
     struct app_ctx *ctx = (struct app_ctx *)data;
@@ -62,11 +67,51 @@ static void *usb_thread_entry(void *data) {
 }
 
 
+int init_jni_cb(JNIEnv *env, jobject audioPlayback) {
+    // Get write callback handle
+    AudioPlayback = (*env)->FindClass(env,
+            "au/id/jms/freedvdroid/AudioPlayback");
+    if (!AudioPlayback) {
+        LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback");
+        return -1;
+    }
+    // Store ref to audio class instance
+    audioPlaybackObj = (*env)->NewGlobalRef(env, audioPlayback);
+    AudioPlayback_write = (*env)->GetMethodID(env, AudioPlayback, "write",
+            "([B)V");
+    if (!AudioPlayback_write) {
+        LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback");
+        (*env)->DeleteGlobalRef(env, AudioPlayback);
+        return -1;
+    }
+    return 0;
+}
+
+int jni_cb(uint8_t *data, int len) {
+    JNIEnv* env;
+    (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+
+    jbyteArray dataArray;
+    dataArray = (*env)->NewByteArray(env, len);
+    (*env)->SetByteArrayRegion(env, dataArray, 0, len, data);
+    (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_write,
+            dataArray);
+    (*env)->DeleteLocalRef(env, dataArray);
+    return 0;
+}
+
 JNIEXPORT jboolean JNICALL
-Java_au_id_jms_freedvdroid_Freedv_setup(JNIEnv *env, jobject foo) {
+Java_au_id_jms_freedvdroid_Freedv_setup(JNIEnv *env, jclass class,
+        jobject audioPlayback) {
     int rc;
 
     struct app_ctx* ctx = calloc(sizeof(struct app_ctx), 1);
+
+    rc = init_jni_cb(env, audioPlayback);
+    if (rc != 0) {
+        LOGE("init_jni_cb: %d\n", rc);
+        goto out;
+    }
 
     rc = usb_setup();
     if (rc != 0) {
@@ -103,8 +148,9 @@ out:
 }
 
 JNIEXPORT jint JNICALL
-JNI_OnLoad(JavaVM* vm UNUSED, void* reserved UNUSED)
+JNI_OnLoad(JavaVM* vm, void* reserved UNUSED)
 {
     LOGD("loaded");
+    java_vm = vm;
     return JNI_VERSION_1_6;
 }

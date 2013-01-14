@@ -36,6 +36,8 @@ public class MainActivity extends Activity {
 
 	private UsbReciever mUsbPermissionReciever;
 
+	private AudioPlayback mAudioPlayback;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,8 +63,8 @@ public class MainActivity extends Activity {
         UsbHelper.useContext(getApplicationContext());
         
     	mUsbAudio = new Freedv();
-    	
-    	AudioPlayback.setup();
+    	mAudioPlayback = new AudioPlayback();
+    	mAudioPlayback.setup();
     	
     	// Buttons
 		final Button startButton = (Button) findViewById(R.id.button1);
@@ -74,7 +76,7 @@ public class MainActivity extends Activity {
 		startButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				Log.d(TAG, "Start pressed");
-		    	if (mUsbAudio.setup() == true) {
+		    	if (mUsbAudio.setup(mAudioPlayback) == true) {
 		    		startButton.setEnabled(false);
 		    		stopButton.setEnabled(true);
 		    	}

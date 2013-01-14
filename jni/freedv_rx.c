@@ -319,9 +319,11 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
             }
             break;
         }
+#if 0
         if (g_state != next_state) {
             LOGD("%ssync\n", g_state == 0 ? "Out of " : "In");
         }
+#endif
         g_state = next_state;
     }
 }
@@ -388,7 +390,6 @@ int decode_file(short *recv, int len) {
     }
 
     int shorts_in_8kbuf = resample_48k_to_8k(buf8k, buf48k, N48*2, i);
-    LOGD("Input: %d, Output: %d, ", i, shorts_in_8kbuf);
 
 #if 0
     ret = fwrite(buf8k, sizeof(short), shorts_in_8kbuf, fout);
@@ -396,9 +397,7 @@ int decode_file(short *recv, int len) {
     return 0;
 #endif
 
-//    LOGD("%d ", n_input_buf);
     /* Copy NOM_SAMPLES of shorts into &input_buf[n_input_buf] */
-    LOGD("Num in: %d, ", n_input_buf);
     memcpy(&input_buf[n_input_buf], buf8k,
             FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short));
     n_input_buf += FDMDV_NOM_SAMPLES_PER_FRAME;
@@ -407,11 +406,13 @@ int decode_file(short *recv, int len) {
             codec_bits,
             input_buf, &n_input_buf);
 
-    LOGD("Out: %d\n", n_output_buf);
-
     if (n_output_buf > N8) {
+#if 0
         ret = fwrite(output_buf, sizeof(short), N8, fout);
         LOGD("Wrote %d to file\n", ret);
+#endif
+        jni_cb(output_buf, N8*sizeof(short));
+
         n_output_buf -= N8;;
         assert(n_output_buf >= 0);
 

@@ -27,6 +27,7 @@ LOCAL_SRC_FILES := freedv/codebook.c freedv/codebookd.c freedv/codebookdt.c \
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_CFLAGS := -Wall
 LOCAL_MODULE := libdroidfreedv
 LOCAL_SHARED_LIBRARIES := libusb-1.0 freedv samplerate
 LOCAL_LDLIBS := -llog
