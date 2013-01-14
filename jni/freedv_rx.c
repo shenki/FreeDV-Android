@@ -24,6 +24,12 @@
 #include "codec2.h"
 //#include "varicode.h"
 
+#include <android/log.h>
+#define LOGD(...) \
+        __android_log_print(ANDROID_LOG_DEBUG, "FreedvRxNative", __VA_ARGS__)
+#define LOGE(...) \
+        __android_log_print(ANDROID_LOG_ERROR, "FreedvRxNative", __VA_ARGS__)
+
 #define MIN_DB             -40.0 
 #define MAX_DB               0.0
 #define BETA                 0.1  // constant for time averageing spectrum data
@@ -236,7 +242,7 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
                     output_buf[*n_output_buf + i] = 0;
                 *n_output_buf += N8;
 //            }
-//                printf("Muted\n");
+//                LOGD("Muted\n");
             assert(*n_output_buf <= (2*codec2_samples_per_frame(codec2)));  
 
             if ((stats.fest_coarse_fine == 1))// && (stats.snr_est > 3.0))
@@ -282,7 +288,7 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
                 assert((n_ascii == 0) || (n_ascii == 1));
                 if (n_ascii) {
                     short ashort = ascii_out;
-                    fprintf(stderr, "%c", ashort);
+                    LOGE("%c", ashort);
                 }
 #endif
                 // reconstruct missing bit we steal for data bit and decode speech
@@ -314,7 +320,7 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
             break;
         }
         if (g_state != next_state) {
-            printf("%ssync\n", g_state == 0 ? "Out of " : "In");
+            LOGD("%ssync\n", g_state == 0 ? "Out of " : "In");
         }
         g_state = next_state;
     }
@@ -382,17 +388,17 @@ int decode_file(short *recv, int len) {
     }
 
     int shorts_in_8kbuf = resample_48k_to_8k(buf8k, buf48k, N48*2, i);
-    printf("Input: %d, Output: %d, ", i, shorts_in_8kbuf);
+    LOGD("Input: %d, Output: %d, ", i, shorts_in_8kbuf);
 
 #if 0
     ret = fwrite(buf8k, sizeof(short), shorts_in_8kbuf, fout);
-    printf("Wrote %d to file\n", ret);
+    LOGD("Wrote %d to file\n", ret);
     return 0;
 #endif
 
-//    printf("%d ", n_input_buf);
+//    LOGD("%d ", n_input_buf);
     /* Copy NOM_SAMPLES of shorts into &input_buf[n_input_buf] */
-    printf("Num in: %d, ", n_input_buf);
+    LOGD("Num in: %d, ", n_input_buf);
     memcpy(&input_buf[n_input_buf], buf8k,
             FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short));
     n_input_buf += FDMDV_NOM_SAMPLES_PER_FRAME;
@@ -401,11 +407,11 @@ int decode_file(short *recv, int len) {
             codec_bits,
             input_buf, &n_input_buf);
 
-    printf("Out: %d\n", n_output_buf);
+    LOGD("Out: %d\n", n_output_buf);
 
     if (n_output_buf > N8) {
         ret = fwrite(output_buf, sizeof(short), N8, fout);
-        printf("Wrote %d to file\n", ret);
+        LOGD("Wrote %d to file\n", ret);
         n_output_buf -= N8;;
         assert(n_output_buf >= 0);
 
@@ -422,12 +428,12 @@ int decode_file(short *recv, int len) {
 }
 
 int freedv_create() {
-    fout_name = "test_file.raw";
+    fout_name = "/storage/sdcard0/test_file.raw";
 
     if (fout_name != NULL) {
         fout = fopen(fout_name,"wb");
         if (fout == NULL) {
-            fprintf(stderr, "Error opening output speech raw file %s\n",
+            LOGE("Error opening output speech raw file %s\n",
                     fout_name);
             exit(1);
         }

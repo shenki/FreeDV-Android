@@ -16,9 +16,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <libusb-1.0/libusb.h>
-
-#include "freedv_usb.h"
+#include <libusb.h>
 
 /* TI PCM2900C Audio CODEC default VID/PID. */
 #define VID 0x08bb
@@ -34,24 +32,14 @@
 #define NUM_PACKETS 20
 #define PACKET_SIZE 192
 
-#ifdef ANDROID
 #include <jni.h>
 #include <android/log.h>
 #define LOGD(...) \
     __android_log_print(ANDROID_LOG_DEBUG, "FreedvUsbNative", __VA_ARGS__)
 #define LOGE(...) \
     __android_log_print(ANDROID_LOG_ERROR, "FreedvUsbNative", __VA_ARGS__)
-#else
-#define LOGD(...) fprintf(stderr, __VA_ARGS__)
-#define LOGE(...) fprintf(stderr, __VA_ARGS__)
-#endif
-
-#if !defined(ANDROID)
-static int logfd;
-#endif
 
 static struct libusb_device_handle *devh = NULL;
-static int outfd = -1;
 
 bool is_setup = false;
 
@@ -79,14 +67,6 @@ static void transfer_cb(struct libusb_transfer *xfr) {
     }
     /* At this point, recv points to a buffer containing len bytes of audio. */
 
-#if 0
-    /* Lock around this write? */
-    printf("transfer_cb: %d bytes in\n", len);
-    if ((rc = write(outfd, recv, len)) < 0) {
-        perror("transfer_cb: unable to write to descriptor");
-    }
-    printf("transfer_cb: %d bytes to fd %d\n", rc, outfd);
-#endif
     /* Call freedv. */
     decode_file(recv, len);
     free(recv);
@@ -106,13 +86,13 @@ int usb_setup(void) {
 
 	rc = libusb_init(NULL);
 	if (rc < 0) {
-		LOGD("libusb_init: %s\n", libusb_error_name(rc));
+		LOGE("libusb_init: %s\n", libusb_error_name(rc));
         return rc;
 	}
 
 	devh = libusb_open_device_with_vid_pid(NULL, VID, PID);
 	if (!devh) {
-		LOGD("libusb_open_device_with_vid_pid failed.\n");
+		LOGE("libusb_open_device_with_vid_pid failed.\n");
         rc = -1;
         goto out;
 	}
@@ -121,20 +101,20 @@ int usb_setup(void) {
     if (rc == 1) {
         rc = libusb_detach_kernel_driver(devh, IFACE_NUM);
         if (rc < 0) {
-            LOGD("libusb_detach_kernel_driver: %s.\n", libusb_error_name(rc));
+            LOGE("libusb_detach_kernel_driver: %s.\n", libusb_error_name(rc));
             goto out;
         }
     }
 
 	rc = libusb_claim_interface(devh, IFACE_NUM);
 	if (rc < 0) {
-		LOGD("libusb_claim_interface: %s.\n", libusb_error_name(rc));
+		LOGE("libusb_claim_interface: %s.\n", libusb_error_name(rc));
         goto out;
     }
 
 	rc = libusb_set_interface_alt_setting(devh, IFACE_NUM, 1);
 	if (rc < 0) {
-		LOGD("libusb_set_interface_alt_setting: %s.\n", libusb_error_name(rc));
+		LOGE("libusb_set_interface_alt_setting: %s.\n", libusb_error_name(rc));
         goto out;
 	}
 
@@ -143,6 +123,7 @@ int usb_setup(void) {
     return 0;
 
 out:
+    LOGE("Failed to setup USB\n");
     if (devh)
         libusb_close(devh);
     libusb_exit(NULL);
@@ -153,18 +134,13 @@ out:
 /* Once setup has succeded, this is called once to start transfers. */
 int usb_start_transfers(int fd) {
     if (!is_setup) {
-        LOGD("Must call setup before starting.\n");
+        LOGE("Must call setup before starting.\n");
         return -1;
     }
 	static uint8_t buf[PACKET_SIZE * NUM_PACKETS];
 	static struct libusb_transfer *xfr[NUM_TRANSFERS];
 	int num_iso_pack = NUM_PACKETS;
     int i;
-
-    outfd = fd;
-    if (outfd < 3) {
-        LOGD("Set outfd to %d. Are you sure?\n", outfd);
-    }
 
     for (i=0; i<NUM_TRANSFERS; i++) {
         xfr[i] = libusb_alloc_transfer(num_iso_pack);
@@ -199,9 +175,7 @@ void usb_exit(void) {
 void usb_process(void) {
     int rc = libusb_handle_events(NULL);
     if (rc != LIBUSB_SUCCESS) {
-        LOGD("libusb_handle_events: %s.\n", libusb_error_name(rc));
+        LOGE("libusb_handle_events: %s.\n", libusb_error_name(rc));
         return;
     }
 }
-
-

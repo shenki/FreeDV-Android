@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     UsbManager mUsbManager = null;
     UsbDevice mAudioDevice = null;
     
-    UsbAudio mUsbAudio = null;
+    Freedv mUsbAudio = null;
 
 	Thread mUsbThread = null;
 
@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
         System.loadLibrary("usb-1.0");
         UsbHelper.useContext(getApplicationContext());
         
-    	mUsbAudio = new UsbAudio();
+    	mUsbAudio = new Freedv();
     	
     	AudioPlayback.setup();
     	
@@ -79,21 +79,21 @@ public class MainActivity extends Activity {
 		    		stopButton.setEnabled(true);
 		    	}
 		    	
-		        new Thread(new Runnable() {
-		            public void run() {
-		            	while (true) {
-		            		mUsbAudio.loop();
-		            	}
-		            }
-		        }).start();
+//		        new Thread(new Runnable() {
+//		            public void run() {
+//		            	while (true) {
+//		            		mUsbAudio.loop();
+//		            	}
+//		            }
+//		        }).start();
 			}
 		});
 		
 		stopButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				Log.d(TAG, "Stop pressed");
-		    	mUsbAudio.stop();
-		    	mUsbAudio.close();
+//		    	mUsbAudio.stop();
+//		    	mUsbAudio.close();
 		    	
 	    		startButton.setEnabled(true);
 	    		stopButton.setEnabled(false);
@@ -118,8 +118,8 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
     	unregisterReceiver(mUsbPermissionReciever);
     	if (mUsbAudio != null) {
-    		mUsbAudio.stop();
-    		mUsbAudio.close();
+//    		mUsbAudio.stop();
+//    		mUsbAudio.close();
     	}
     }
 
