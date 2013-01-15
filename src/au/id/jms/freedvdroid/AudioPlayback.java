@@ -31,4 +31,13 @@ public class AudioPlayback {
 	public void write(byte[] decodedAudio) {
 		track.write(decodedAudio, 0, decodedAudio.length);
 	}
+	
+	public void stop() {
+		track.stop();
+	}
+	
+	public void pause() {
+		track.pause();
+		track.flush();
+	}
 }

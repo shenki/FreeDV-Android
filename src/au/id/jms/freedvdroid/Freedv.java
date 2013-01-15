@@ -9,4 +9,5 @@ public class Freedv {
     }
 
     public native boolean setup(AudioPlayback c);
+    public native boolean close();
 }

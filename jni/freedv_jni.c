@@ -35,8 +35,12 @@
 struct app_ctx {
     int quitfd;
     int logfd;
+    pthread_key_t env_key;
     pthread_t usb_thread;
+    bool usb_thread_run;
 };
+
+struct app_ctx *ctx;
 
 jobject audioPlaybackObj;
 jmethodID AudioPlayback_write;
@@ -47,14 +51,7 @@ static void *usb_thread_entry(void *data) {
     struct app_ctx *ctx = (struct app_ctx *)data;
     LOGD("usb_thread started\n");
     prctl(PR_SET_NAME, "usb_thread");
-    while (1) {
-#if 0
-        uint8_t buf[1];
-        if (read(ctx->quitfd, buf, 1) != -EAGAIN) {
-            LOGD("usb_thread: exit due to quitfd\n");
-            break;
-        }
-#endif
+    while (ctx->usb_thread_run) {
         /* Handle libusb event. This call is blocking. */
         int rc = libusb_handle_events(NULL);
         if (rc != LIBUSB_SUCCESS) {
@@ -87,12 +84,20 @@ int init_jni_cb(JNIEnv *env, jobject audioPlayback) {
     return 0;
 }
 
-int jni_cb(uint8_t *data, int len) {
-    JNIEnv* env;
-    (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+static void destroy_jni_cb(void* data) {
+    if (data != NULL) {
+        (*java_vm)->DetachCurrentThread(java_vm);
+        pthread_setspecific(ctx->env_key, NULL);
+        LOGD("Detached jni_cb thread");
+    }
+}
 
-    jbyteArray dataArray;
-    dataArray = (*env)->NewByteArray(env, len);
+int jni_cb(const jbyte *data, int len) {
+    JNIEnv *env;
+    (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+    pthread_setspecific(ctx->env_key, (void *)env);
+
+    jbyteArray dataArray = (*env)->NewByteArray(env, len);
     (*env)->SetByteArrayRegion(env, dataArray, 0, len, data);
     (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_write,
             dataArray);
@@ -105,11 +110,17 @@ Java_au_id_jms_freedvdroid_Freedv_setup(JNIEnv *env, jclass class,
         jobject audioPlayback) {
     int rc;
 
-    struct app_ctx* ctx = calloc(sizeof(struct app_ctx), 1);
+    ctx = calloc(sizeof(struct app_ctx), 1);
 
     rc = init_jni_cb(env, audioPlayback);
     if (rc != 0) {
         LOGE("init_jni_cb: %d\n", rc);
+        goto out;
+    }
+
+    rc = pthread_key_create(&ctx->env_key, destroy_jni_cb);
+    if (rc) {
+        LOGE("Error creating thread key");
         goto out;
     }
 
@@ -131,6 +142,7 @@ Java_au_id_jms_freedvdroid_Freedv_setup(JNIEnv *env, jclass class,
         goto out;
     }
 
+    ctx->usb_thread_run = true;
     rc = pthread_create(&ctx->usb_thread, NULL, usb_thread_entry, ctx);
     if (rc < 0) {
         LOGE("pthread_create: usb_thread failed: %d\n", rc);
@@ -146,6 +158,24 @@ out:
         pthread_kill(ctx->usb_thread, SIGKILL);
     return false;
 }
+
+JNIEXPORT jboolean JNICALL
+Java_au_id_jms_freedvdroid_Freedv_close(JNIEnv *env, jclass class) {
+    // Stop thread
+    ctx->usb_thread_run = false;
+    if (pthread_join(ctx->usb_thread, NULL) < 0) {
+        LOGE("Could not join usb_thread");
+    }
+    // Destroy JNI global references
+    (*env)->DeleteGlobalRef(env, audioPlaybackObj);
+    // Cleanup the rest
+    usb_exit();
+    fdmdv_close();
+    free(ctx);
+    LOGD("Closed");
+    return true;
+}
+
 
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM* vm, void* reserved UNUSED)

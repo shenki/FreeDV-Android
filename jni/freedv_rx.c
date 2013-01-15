@@ -242,7 +242,6 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
                     output_buf[*n_output_buf + i] = 0;
                 *n_output_buf += N8;
 //            }
-//                LOGD("Muted\n");
             assert(*n_output_buf <= (2*codec2_samples_per_frame(codec2)));  
 
             if ((stats.fest_coarse_fine == 1))// && (stats.snr_est > 3.0))
@@ -319,11 +318,6 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
             }
             break;
         }
-#if 0
-        if (g_state != next_state) {
-            LOGD("%ssync\n", g_state == 0 ? "Out of " : "In");
-        }
-#endif
         g_state = next_state;
     }
 }
@@ -363,13 +357,6 @@ int resample_48k_to_8k(
     return src_data.output_frames_gen;
 }
 
-
-/*
-  decode_file() is the FLTK function that gets continusouly called when FLTK
-  is not doing GUI work.  We use this function for providing file
-  input to update the GUI when simulating real time operation.
-*/
-
 int decode_file(short *recv, int len) {
 
     pthread_mutex_lock(&mutex);
@@ -378,24 +365,12 @@ int decode_file(short *recv, int len) {
     int shorts_in_buffer = len / 2;
     short buf8k[N48*2];
     short buf48k[960];
-    /*
-       short      output_short[],
-       short      input_short[],
-       int        length_output_short, // maximum output array length in samples 
-       int        length_input_short
-     */
 
     for(i = 0; i < shorts_in_buffer; i++, recv += 2) {
         buf48k[i] = *recv;
     }
-
     int shorts_in_8kbuf = resample_48k_to_8k(buf8k, buf48k, N48*2, i);
-
-#if 0
-    ret = fwrite(buf8k, sizeof(short), shorts_in_8kbuf, fout);
-    LOGD("Wrote %d to file\n", ret);
-    return 0;
-#endif
+    assert(shorts_in_8kbuf >= FDMDV_NOM_SAMPLES_PER_FRAME);
 
     /* Copy NOM_SAMPLES of shorts into &input_buf[n_input_buf] */
     memcpy(&input_buf[n_input_buf], buf8k,
@@ -407,39 +382,22 @@ int decode_file(short *recv, int len) {
             input_buf, &n_input_buf);
 
     if (n_output_buf > N8) {
-#if 0
-        ret = fwrite(output_buf, sizeof(short), N8, fout);
-        LOGD("Wrote %d to file\n", ret);
-#endif
         jni_cb(output_buf, N8*sizeof(short));
 
         n_output_buf -= N8;;
         assert(n_output_buf >= 0);
 
+        /* shift speech sample output buffer */
         for(i=0; i<n_output_buf; i++)
             output_buf[i] = output_buf[i+N8];
     }
 
-    /* shift speech sample output buffer */
 
-    //            for(i=0; i<n_output_buf; i++)
-    //                output_buf[i] = output_buf[i+N8];
     pthread_mutex_unlock(&mutex);
     return ret;
 }
 
 int freedv_create() {
-    fout_name = "/storage/sdcard0/test_file.raw";
-
-    if (fout_name != NULL) {
-        fout = fopen(fout_name,"wb");
-        if (fout == NULL) {
-            LOGE("Error opening output speech raw file %s\n",
-                    fout_name);
-            exit(1);
-        }
-    }
-
     pthread_mutex_init(&mutex, NULL);
 
     int src_error;
@@ -454,13 +412,12 @@ int freedv_create() {
 }
 
 void fdmdv_close() {
-    fdmdv_destroy(fdmdv);
-    codec2_destroy(codec2);
-    free(output_buf);
-
-    if (fin_name != NULL)
-        fclose(fin);
-    if (fout_name != NULL)
-        fclose(fout);
-
+    if (fdmdv)
+        fdmdv_destroy(fdmdv);
+    if (codec2)
+        codec2_destroy(codec2);
+    if (output_buf)
+        free(output_buf);
+    if (insrc1)
+        free(insrc1);
 }

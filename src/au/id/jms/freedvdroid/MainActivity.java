@@ -77,25 +77,18 @@ public class MainActivity extends Activity {
 			public void onClick(View v) {
 				Log.d(TAG, "Start pressed");
 		    	if (mUsbAudio.setup(mAudioPlayback) == true) {
+		    		mAudioPlayback.setup();
 		    		startButton.setEnabled(false);
 		    		stopButton.setEnabled(true);
 		    	}
-		    	
-//		        new Thread(new Runnable() {
-//		            public void run() {
-//		            	while (true) {
-//		            		mUsbAudio.loop();
-//		            	}
-//		            }
-//		        }).start();
 			}
 		});
 		
 		stopButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				Log.d(TAG, "Stop pressed");
-//		    	mUsbAudio.stop();
-//		    	mUsbAudio.close();
+		    	mUsbAudio.close();
+		    	mAudioPlayback.pause();
 		    	
 	    		startButton.setEnabled(true);
 	    		stopButton.setEnabled(false);
@@ -117,11 +110,24 @@ public class MainActivity extends Activity {
     }
     
     @Override
+    protected void onPause() {
+    	super.onPause();
+    	if (mAudioPlayback != null) {
+    		mAudioPlayback.pause();
+    	}
+    }
+    
+    @Override
     protected void onDestroy() {
+    	super.onDestroy();
     	unregisterReceiver(mUsbPermissionReciever);
+    	if (mAudioPlayback != null) {
+    		mAudioPlayback.stop();
+    		mAudioPlayback = null;
+    	}
     	if (mUsbAudio != null) {
-//    		mUsbAudio.stop();
-//    		mUsbAudio.close();
+    		mUsbAudio.close();
+    		mUsbAudio = null;
     	}
     }
 
