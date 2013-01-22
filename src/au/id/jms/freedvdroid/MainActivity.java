@@ -62,6 +62,8 @@ public class MainActivity extends Activity {
 	private ArrayList<GraphViewData> timingEstData;
 	private GraphViewSeries timingEstSeries;
 	
+	private ScatterGraphView mScatter;
+	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,6 +110,8 @@ public class MainActivity extends Activity {
         
     	mUsbAudio = new Freedv();
     	mAudioPlayback = new AudioPlayback(mSyncHandler, mStatsHandler);
+    	
+    	mScatter = (ScatterGraphView) findViewById(R.id.scattergraph);
     	
     	// Buttons
 		final Button startButton = (Button) findViewById(R.id.button1);
@@ -180,6 +184,9 @@ public class MainActivity extends Activity {
     }
     
     public void updateStatsGraph(FdmdvStats stats) {
+    	
+    	mScatter.addPoint(stats.rxSymbols);
+
     	if (freqOffsetSeries != null) { 
     		while (freqOffsetSeries.getItemCount() > HISTORY_SIZE) {
     			freqOffsetSeries.removeValue();

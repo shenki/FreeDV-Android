@@ -4,9 +4,11 @@ public class FdmdvStats {
 	
 	public float freqOffEstHz;
 	public float rxTimingEstSamples;
+	public float[] rxSymbols;
 
-	FdmdvStats(float foff, float rx_timing) {
+	FdmdvStats(float foff, float rx_timing, float[] symbols) {
 		freqOffEstHz = foff;
 		rxTimingEstSamples = rx_timing;
+		rxSymbols = symbols;
 	}
 }

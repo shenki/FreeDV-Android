@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <libusb.h>
 #include <codec2_fdmdv.h>
@@ -138,6 +139,7 @@ void jni_update_sync(bool state) {
     (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_sync, state);
 }
 
+
 void jni_update_stats(const struct FDMDV_STATS *stats) {
     JNIEnv *env;
     if (cb_attached == false) {
@@ -146,11 +148,24 @@ void jni_update_stats(const struct FDMDV_STATS *stats) {
     } else {
         env = pthread_getspecific(ctx->env_key);
     }
-    float s[2] = {stats->foff, stats->rx_timing};
 
-    jbyteArray dataArray = (*env)->NewByteArray(env, sizeof(s)*2);
-    (*env)->SetByteArrayRegion(env, dataArray, 0, sizeof(float)*2,
-            (const jbyte *)stats);
+    /* FDMDV_STATS structure:
+     * float snr_est - estimated SNR of rx signal in dB (3 kHz noise BW)
+     * COMP rx_symbols[FDMDV_NSYM] - latest received symbols, for scatter plot 
+     * int fest_coarse_fine - freq est state, 0-coarse 1-fine
+     * float foff - estimated freq offset in Hz
+     * float rx_timing - estimated optimum timing offset in samples
+     * float clock_offset - Estimated tx/rx sample clock offset in ppm
+    */
+
+    assert(sizeof(stats->rx_symbols) == 15*2);
+    float s[2+15*2];
+    s[0] = stats->foff;
+    s[1] = stats->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME;
+    memcpy(&s[2], stats->rx_symbols, sizeof(stats->rx_symbols));
+
+    jfloatArray dataArray = (*env)->NewFloatArray(env, sizeof(s));
+    (*env)->SetFloatArrayRegion(env, dataArray, 0, sizeof(s), s);
     (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_stats,
             dataArray);
     (*env)->DeleteLocalRef(env, dataArray);

@@ -81,7 +81,7 @@ abstract public class GraphView extends LinearLayout {
 			paint.setTextSize(18);
 			paint.setColor(Color.BLACK);
 			canvas.drawText(title, (graphwidth / 2) + horstart, border - 4, paint);
-			paint.setTextSize(18);
+			paint.setTextSize(20 * getResources().getDisplayMetrics().density);
 
 			if (maxY != minY) {
 				paint.setStrokeCap(Paint.Cap.ROUND);
@@ -308,7 +308,7 @@ abstract public class GraphView extends LinearLayout {
 	private boolean scrollable;
 	private double viewportStart;
 	private double viewportSize;
-	private final View viewVerLabels;
+//	private final View viewVerLabels;
 	private boolean scalable;
 	private NumberFormat numberformatter;
 	private final List<GraphViewSeries> graphSeries;
@@ -336,8 +336,8 @@ abstract public class GraphView extends LinearLayout {
 		paint = new Paint();
 		graphSeries = new ArrayList<GraphViewSeries>();
 
-		viewVerLabels = new VerLabelsView(context);
-		addView(viewVerLabels);
+//		viewVerLabels = new VerLabelsView(context);
+//		addView(viewVerLabels);
 		addView(new GraphViewContentView(context), new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT, 1));
 	}
 
