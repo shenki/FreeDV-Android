@@ -29,7 +29,7 @@
 /* We queue many transfers to ensure no packets are missed. */
 #define NUM_TRANSFERS 10
 /* Each transfer will have a max of NUM_PACKETS packets. */
-#define NUM_PACKETS 25
+#define NUM_PACKETS 20
 #define PACKET_SIZE 192
 
 #include <jni.h>
@@ -73,7 +73,7 @@ static void transfer_cb(struct libusb_transfer *xfr) {
     /* At this point, recv points to a buffer containing len bytes of audio. */
 
     /* Call freedv. */
-    decode_file(recv, len/2);
+    decode_file(recv, len);
     free(recv);
 	if ((rc = libusb_submit_transfer(xfr)) < 0) {
 		LOGE("libusb_submit_transfer: %s.\n", libusb_error_name(rc));

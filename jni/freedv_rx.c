@@ -346,7 +346,6 @@ int resample_48k_to_8k(
     const int input_sample_rate = 48000;
     const int output_sample_rate = 8000;
 
-    assert(insrc1 != NULL);
     assert(length_input_short <= N48*2);
     assert(length_output_short <= N48*2);
 
@@ -362,42 +361,32 @@ int resample_48k_to_8k(
     src_process(insrc1, &src_data);
 
     assert(src_data.output_frames_gen <= length_output_short);
-    src_float_to_short_array(output, output_short, src_data.output_frames_gen); 
+    src_float_to_short_array(output, output_short, src_data.output_frames_gen);
 
     return src_data.output_frames_gen;
 }
 
-int decode_file(short *recv, int len) {
+int decode_file(short *buf_48k_stereo, int num_bytes_48k_stereo) {
 
     pthread_mutex_lock(&mutex);
     int ret = 0, i;
 
-    int shorts_in_buffer = len / 2;
-    short buf8k[N48*2];
-    short *buf48k = malloc(shorts_in_buffer *sizeof(short));
+    int num_shorts_48k_stereo = num_bytes_48k_stereo/2;
 
-    short *end = recv + len;
-    for(i = 0; i < shorts_in_buffer; i++, recv += 2) {
-        if (recv > end)
-            LOGD("WTF");
-        buf48k[i] = *recv;
+    unsigned int num_shorts_48k_mono = num_shorts_48k_stereo/2;
+    short buf_8k_mono[N48*2];
+    short buf_48k_mono[1920];
+
+    assert(num_shorts_48k_mono < sizeof(buf_48k_mono)/sizeof(short));
+
+    for(i = 0; i < num_shorts_48k_mono; i++, buf_48k_stereo += 2) {
+        buf_48k_mono[i] = *buf_48k_stereo;
     }
-    int shorts_in_8kbuf = resample_48k_to_8k(buf8k, buf48k, N48*2, i);
-    free(buf48k);
-    if (!(shorts_in_8kbuf >= FDMDV_NOM_SAMPLES_PER_FRAME)) {
-        LOGD("Shorts in 8k: %d\t shorts_in_buffer: %d\t i: %d",
-                shorts_in_8kbuf, shorts_in_buffer, i);
-        LOGD("shorts_in_8kbuf (%d) >= FDMDV_NOM_SAMPLES_PER_FRAME (%d)",
-                shorts_in_8kbuf, FDMDV_NOM_SAMPLES_PER_FRAME);
-    }
+    int shorts_in_8kbuf = resample_48k_to_8k(buf_8k_mono, buf_48k_mono, N48*2, i);
     assert(shorts_in_8kbuf >= FDMDV_NOM_SAMPLES_PER_FRAME);
 
     /* Copy NOM_SAMPLES of shorts into &input_buf[n_input_buf] */
-    if (!(n_input_buf < FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short))) {
-        LOGD("n_input_buf: %d\n", n_input_buf);
-    }
-    assert(n_input_buf < FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short));
-    memcpy(&input_buf[n_input_buf], buf8k,
+    memcpy(&input_buf[n_input_buf], buf_8k_mono,
             FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short));
     n_input_buf += FDMDV_NOM_SAMPLES_PER_FRAME;
 
@@ -415,7 +404,6 @@ int decode_file(short *recv, int len) {
         for(i=0; i<n_output_buf; i++)
             output_buf[i] = output_buf[i+N8];
     }
-
 
     pthread_mutex_unlock(&mutex);
     return ret;
