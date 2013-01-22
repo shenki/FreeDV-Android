@@ -36,7 +36,7 @@ abstract public class GraphView extends LinearLayout {
 
 	static final private class GraphViewConfig {
 		static final float BORDER = 40;
-		static final float VERTICAL_LABEL_WIDTH = 100;
+		static final float VERTICAL_LABEL_WIDTH = 40;
 		static final float HORIZONTAL_LABEL_HEIGHT = 80;
 	}
 
@@ -77,35 +77,9 @@ abstract public class GraphView extends LinearLayout {
 			float graphheight = height - (2 * border);
 			graphwidth = width;
 
-			horlabels = generateHorlabels(graphwidth);
-			verlabels = generateVerlabels(graphheight);
-
-			// vertical lines
-			paint.setTextAlign(Align.LEFT);
-			int vers = verlabels.length - 1;
-			for (int i = 0; i < verlabels.length; i++) {
-				paint.setColor(Color.DKGRAY);
-				float y = ((graphheight / vers) * i) + border;
-				canvas.drawLine(horstart, y, width, y, paint);
-			}
-
-			// horizontal labels + lines
-			int hors = horlabels.length - 1;
-			for (int i = 0; i < horlabels.length; i++) {
-				paint.setColor(Color.DKGRAY);
-				float x = ((graphwidth / hors) * i) + horstart;
-				canvas.drawLine(x, height - border, x, border, paint);
-				paint.setTextAlign(Align.CENTER);
-				if (i==horlabels.length-1)
-					paint.setTextAlign(Align.RIGHT);
-				if (i==0)
-					paint.setTextAlign(Align.LEFT);
-				paint.setColor(Color.WHITE);
-				canvas.drawText(horlabels[i], x, height - 4, paint);
-			}
-
 			paint.setTextAlign(Align.CENTER);
-			paint.setTextSize(40);
+			paint.setTextSize(18);
+			paint.setColor(Color.BLACK);
 			canvas.drawText(title, (graphwidth / 2) + horstart, border - 4, paint);
 			paint.setTextSize(18);
 
