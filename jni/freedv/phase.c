@@ -71,10 +71,7 @@ void aks_to_H(
 
   /* Determine DFT of A(exp(jw)) ------------------------------------------*/
 
-  for(i=0; i<FFT_ENC; i++) {
-    pw[i].real = 0.0;
-    pw[i].imag = 0.0;
-  }
+  init_comp_array(pw, FFT_ENC);
 
   for(i=0; i<=order; i++)
     pw[i].real = aks[i];

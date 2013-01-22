@@ -33,6 +33,10 @@
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
+#if defined(__ARM_NEON__)
+#include <arm_neon.h>
+#endif
 
 /*---------------------------------------------------------------------------*\
                                                                              
@@ -138,14 +142,20 @@ void *nlp_create()
 
     nlp = (NLP*)malloc(sizeof(NLP));
     if (nlp == NULL)
-	return NULL;
-
+    return NULL;
+#if !defined(__ARM_NEON__)
     for(i=0; i<PMAX_M; i++)
-	nlp->sq[i] = 0.0;
+        nlp->sq[i] = 0.0;
+#else
+    float32x4_t zerovec = { 0.0f, 0.0f, 0.0f, 0.0f };
+    for(i=0; i<PMAX_M; i+=4) {
+        vst1q_f32(&nlp->sq[i], zerovec);
+    }
+#endif
     nlp->mem_x = 0.0;
     nlp->mem_y = 0.0;
     for(i=0; i<NLP_NTAP; i++)
-	nlp->mem_fir[i] = 0.0;
+        nlp->mem_fir[i] = 0.0;
 
     nlp->fft_cfg = kiss_fft_alloc (PE_FFT_SIZE, 0, NULL, NULL);
     assert(nlp->fft_cfg != NULL);
@@ -227,53 +237,69 @@ float nlp(
     assert(m <= PMAX_M);
     nlp = (NLP*)nlp_state;
 
-    /* Square, notch filter at DC, and LP filter vector */
+     /* Square, notch filter at DC, and LP filter vector */
+#if !defined(__ARM_NEON__)
+    for(i=m-n; i<m; i++)       /* square latest speech samples */
+       nlp->sq[i] = Sn[i]*Sn[i];
+#else
+    for(i=m-n; i<m; i+=4) {  // m and n should %4 = 0
+       float32x4_t sq4 = vld1q_f32(&Sn[i]);
+       sq4 = vmulq_f32(sq4, sq4);
+       vst1q_f32(&nlp->sq[i], sq4);
+     }
+#endif
+    float mem_x = nlp->mem_x, mem_y = nlp->mem_y;
+    for(i=m-n; i<m; i++) {    /* notch filter at DC */
+        notch = nlp->sq[i] - mem_x;
+        notch += COEFF*mem_y;
+        mem_x = nlp->sq[i];
+        mem_y = notch;
+        nlp->sq[i] = notch + 1.0;  /* With 0 input vectors to codec,
+                          fft_do() would take a long
+                          time to execute when running in
+                          real time.  Problem was traced
+                          to kiss_fft function call in
+                          this function. Adding this small
+                          constant fixed problem.  Not
+                          exactly sure why. */
+     }
+    nlp->mem_x = mem_x;
+    nlp->mem_y = mem_y;
+ 
+    for(i=m-n; i<m; i++) {    /* FIR filter vector */
+        memmove(&nlp->mem_fir[0], &nlp->mem_fir[1], (NLP_NTAP-1) * sizeof(float));
+        nlp->mem_fir[NLP_NTAP-1] = nlp->sq[i];
 
-    for(i=m-n; i<m; i++) 	    /* square latest speech samples */
-	nlp->sq[i] = Sn[i]*Sn[i];
-
-    for(i=m-n; i<m; i++) {	/* notch filter at DC */
-	notch = nlp->sq[i] - nlp->mem_x;
-	notch += COEFF*nlp->mem_y;
-	nlp->mem_x = nlp->sq[i];
-	nlp->mem_y = notch;
-	nlp->sq[i] = notch + 1.0;  /* With 0 input vectors to codec,
-				      kiss_fft() would take a long
-				      time to execute when running in
-				      real time.  Problem was traced
-				      to kiss_fft function call in
-				      this function. Adding this small
-				      constant fixed problem.  Not
-				      exactly sure why. */
-    }
-
-    for(i=m-n; i<m; i++) {	/* FIR filter vector */
-
-	for(j=0; j<NLP_NTAP-1; j++)
-	    nlp->mem_fir[j] = nlp->mem_fir[j+1];
-	nlp->mem_fir[NLP_NTAP-1] = nlp->sq[i];
-
-	nlp->sq[i] = 0.0;
-	for(j=0; j<NLP_NTAP; j++)
-	    nlp->sq[i] += nlp->mem_fir[j]*nlp_fir[j];
-    }
-
-    /* Decimate and DFT */
-
-    for(i=0; i<PE_FFT_SIZE; i++) {
-	fw[i].real = 0.0;
-	fw[i].imag = 0.0;
-    }
-    for(i=0; i<m/DEC; i++) {
-	fw[i].real = nlp->sq[i*DEC]*(0.5 - 0.5*cosf(2*PI*i/(m/DEC-1)));
-    }
-    #ifdef DUMP
-    dump_dec(Fw);
-    #endif
-
+#if !defined(__ARM_NEON__)
+       float tmpsum = 0.0f;
+       for(j=0; j<NLP_NTAP; j++) {
+           tmpsum += nlp->mem_fir[j]*nlp_fir[j];
+       }
+       nlp->sq[i] = tmpsum;
+#else
+       float32x4_t sum4 = { 0.0f, 0.0f, 0.0f, 0.0f };
+       for(j=0; j<NLP_NTAP; j+=4) {  // NLP_NTAP should %4 = 0
+               float32x4_t mem_fir4 = vld1q_f32(&nlp->mem_fir[j]);
+               float32x4_t nlp_fir4 = vld1q_f32(&nlp_fir[j]);
+               sum4 = vmlaq_f32(sum4, mem_fir4, nlp_fir4);
+       }
+       nlp->sq[i] = vgetq_lane_f32(sum4, 0) + vgetq_lane_f32(sum4, 1) +
+               vgetq_lane_f32(sum4, 2) + vgetq_lane_f32(sum4, 3);
+#endif
+     }
+        /* Decimate and DFT */
+    init_comp_array(fw, PE_FFT_SIZE);
+     for(i=0; i<m/DEC; i++) {
+       fw[i].real = nlp->sq[i*DEC]*(0.5 - 0.5*cosf(2*PI*i/(m/DEC-1)));
+     }
+#ifdef DUMP
+       dump_dec(Fw);
+#endif
+ 
     kiss_fft(nlp->fft_cfg, (kiss_fft_cpx *)fw, (kiss_fft_cpx *)Fw);
-    for(i=0; i<PE_FFT_SIZE; i++)
-	Fw[i].real = Fw[i].real*Fw[i].real + Fw[i].imag*Fw[i].imag;
+    for(i=0; i<PE_FFT_SIZE; i++) {
+        Fw[i].real = Fw[i].real*Fw[i].real + Fw[i].imag*Fw[i].imag;
+    }
 
     #ifdef DUMP
     dump_sq(nlp->sq);
@@ -285,10 +311,10 @@ float nlp(
     gmax = 0.0;
     gmax_bin = PE_FFT_SIZE*DEC/pmax;
     for(i=PE_FFT_SIZE*DEC/pmax; i<=PE_FFT_SIZE*DEC/pmin; i++) {
-	if (Fw[i].real > gmax) {
-	    gmax = Fw[i].real;
-	    gmax_bin = i;
-	}
+    if (Fw[i].real > gmax) {
+        gmax = Fw[i].real;
+        gmax_bin = i;
+    }
     }
     
     //#define POST_PROCESS_MBE
@@ -300,8 +326,7 @@ float nlp(
 
     /* Shift samples in buffer to make room for new samples */
 
-    for(i=0; i<m-n; i++)
-	nlp->sq[i] = nlp->sq[i+n];
+    memmove(&nlp->sq[0], &nlp->sq[n], (m - n) * sizeof(float));
 
     /* return pitch and F0 estimate */
 

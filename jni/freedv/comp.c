@@ -1,11 +1,11 @@
 /*---------------------------------------------------------------------------*\
-                                                                             
+
   FILE........: comp.h
-  AUTHOR......: David Rowe                                                          
-  DATE CREATED: 24/08/09
-                                                                             
-  Complex number definition.
-                                                                             
+  AUTHOR......: Markovtsev Vadim
+  DATE CREATED: 19/11/12
+
+  Complex number routines implementation.
+
 \*---------------------------------------------------------------------------*/
 
 /*
@@ -25,16 +25,25 @@
   along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __COMP__
-#define __COMP__
-
-/* Complex number */
-
-typedef struct {
-  float real;
-  float imag;
-} COMP;
-
-void init_comp_array(COMP *ptr, int size);
-
+#include "comp.h"
+#if defined(__ARM_NEON__)
+#include <arm_neon.h>
 #endif
+#include <assert.h>
+
+void init_comp_array(COMP *ptr, int size) {
+    assert(size > 0);
+    int i;
+#if !defined(__ARM_NEON__)
+    for(i=0; i<size; i++) {
+        ptr[i].real = 0.0f;
+        ptr[i].imag = 0.0f;
+    }
+#else
+    assert(size % 2 == 0 && "size should be even");
+    const float32x4_t zerovec = { 0.0f, 0.0f, 0.0f, 0.0f };
+    for(i=0; i<size; i+=2) {
+        vst1q_f32((float *)&ptr[i], zerovec);
+    }
+#endif
+}
