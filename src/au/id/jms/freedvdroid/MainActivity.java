@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
 	
     private static final String ACTION_USB_PERMISSION = "au.id.jms.freedvdroid.USB_PERMISSION";
 
-	private static final int HISTORY_SIZE = 200;
+	private static final int HISTORY_SIZE = 60;
     PendingIntent mPermissionIntent = null;
     UsbManager mUsbManager = null;
     UsbDevice mAudioDevice = null;
@@ -58,6 +58,9 @@ public class MainActivity extends Activity {
 	private GraphView freqOffsetGraphView;
 	private ArrayList<GraphViewData> freqOffsetData;
 	private GraphViewSeries freqOffsetSeries;
+	private GraphView timingEstGraphView;
+	private ArrayList<GraphViewData> timingEstData;
+	private GraphViewSeries timingEstSeries;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +102,9 @@ public class MainActivity extends Activity {
 		
 		freqOffsetGraphView = new LineGraphView(this, "Frequency Estimation");
 		((LinearLayout) findViewById(R.id.graph1)).addView(freqOffsetGraphView);
+		
+		timingEstGraphView = new LineGraphView(this, "Timing Offset");
+		((LinearLayout) findViewById(R.id.graph2)).addView(timingEstGraphView);
         
     	mUsbAudio = new Freedv();
     	mAudioPlayback = new AudioPlayback(mSyncHandler, mStatsHandler);
@@ -126,6 +132,11 @@ public class MainActivity extends Activity {
 			        freqOffsetSeries = new GraphViewSeries("Frequency",
 			        		new GraphViewStyle(Color.rgb(200, 50, 00), 3), freqOffsetData);
 			        freqOffsetGraphView.addSeries(freqOffsetSeries);
+					timingEstData = new ArrayList<GraphViewData>(HISTORY_SIZE); 
+					timingEstSeries = new GraphViewSeries("Samples",
+			        		new GraphViewStyle(Color.rgb(50, 200, 00), 3), timingEstData);
+					timingEstGraphView.addSeries(timingEstSeries);
+
 		    	}
 			}
 		});
@@ -140,6 +151,9 @@ public class MainActivity extends Activity {
 		        freqOffsetGraphView.removeSeries(freqOffsetSeries);
 		        freqOffsetData = null;
 		        freqOffsetSeries = null;
+		        timingEstGraphView.removeSeries(freqOffsetSeries);
+		        timingEstData = null;
+		        timingEstSeries = null;
 		    	
 	    		startButton.setEnabled(true);
 	    		stopButton.setEnabled(false);
@@ -171,7 +185,6 @@ public class MainActivity extends Activity {
     			freqOffsetSeries.removeValue();
     		}
     		freqOffsetSeries.addValue(new GraphViewData(graphOffsetX, stats.freqOffEstHz));
-    		graphOffsetX++;
 
     		// YAARRR, Here be hacks.
     		// Need to work out how to force a redraw code to be called without removing and 
@@ -180,6 +193,21 @@ public class MainActivity extends Activity {
     		layout.removeView(freqOffsetGraphView);
     		layout.addView(freqOffsetGraphView);
     	}
+    	
+    	if (timingEstSeries != null) { 
+    		while (timingEstSeries.getItemCount() > HISTORY_SIZE) {
+    			timingEstSeries.removeValue();
+    		}
+    		timingEstSeries.addValue(new GraphViewData(graphOffsetX, stats.rxTimingEstSamples));
+
+    		// YAARRR, Here be hacks.
+    		// Need to work out how to force a redraw code to be called without removing and 
+    		// re-adding the view.
+    		LinearLayout layout = (LinearLayout) findViewById(R.id.graph2);
+    		layout.removeView(timingEstGraphView);
+    		layout.addView(timingEstGraphView);
+    	}
+    	graphOffsetX++;
     }
     
     @Override

@@ -49,12 +49,12 @@ public class AudioPlayback {
 	}
 	
 	public void sync(boolean sync) {
-		Log.d(TAG, "Sync is now " + sync);
+//		Log.d(TAG, "Sync is now " + sync);
         mSyncHandler.obtainMessage(1, sync).sendToTarget();
 	}
 	
 	public void stats(float[] stats) {
 		FdmdvStats s = new FdmdvStats(stats[0], stats[1]);
-//        mStatsHandler.obtainMessage(1, s).sendToTarget();
+        mStatsHandler.obtainMessage(1, s).sendToTarget();
 	}
 }
