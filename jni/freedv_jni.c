@@ -21,6 +21,7 @@
 #include <stdbool.h>
 
 #include <libusb.h>
+#include <codec2_fdmdv.h>
 
 #include <jni.h>
 #include <android/log.h>
@@ -42,8 +43,11 @@ struct app_ctx {
 
 struct app_ctx *ctx;
 
+bool cb_attached = 0;
 jobject audioPlaybackObj;
 jmethodID AudioPlayback_write;
+jmethodID AudioPlayback_sync;
+jmethodID AudioPlayback_stats;
 jclass AudioPlayback;
 JavaVM* java_vm;
 
@@ -77,10 +81,25 @@ int init_jni_cb(JNIEnv *env, jobject audioPlayback) {
     AudioPlayback_write = (*env)->GetMethodID(env, AudioPlayback, "write",
             "([B)V");
     if (!AudioPlayback_write) {
-        LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback");
+        LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback.write()");
         (*env)->DeleteGlobalRef(env, AudioPlayback);
         return -1;
     }
+    AudioPlayback_sync = (*env)->GetMethodID(env, AudioPlayback, "sync",
+            "(Z)V");
+    if (!AudioPlayback_sync) {
+        LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback.sync()");
+        (*env)->DeleteGlobalRef(env, AudioPlayback);
+        return -1;
+    }
+    AudioPlayback_stats = (*env)->GetMethodID(env, AudioPlayback, "stats",
+            "([F)V");
+    if (!AudioPlayback_sync) {
+        LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback.stats()");
+        (*env)->DeleteGlobalRef(env, AudioPlayback);
+        return -1;
+    }
+    cb_attached = false;
     return 0;
 }
 
@@ -92,18 +111,51 @@ static void destroy_jni_cb(void* data) {
     }
 }
 
-int jni_cb(const jbyte *data, int len) {
+void jni_cb(const jbyte *data, int len) {
     JNIEnv *env;
-    (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
-    pthread_setspecific(ctx->env_key, (void *)env);
+    if (cb_attached == false) {
+        (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+        pthread_setspecific(ctx->env_key, (void *)env);
+    } else {
+        env = pthread_getspecific(ctx->env_key);
+    }
 
     jbyteArray dataArray = (*env)->NewByteArray(env, len);
     (*env)->SetByteArrayRegion(env, dataArray, 0, len, data);
     (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_write,
             dataArray);
     (*env)->DeleteLocalRef(env, dataArray);
-    return 0;
 }
+
+void jni_update_sync(bool state) {
+    JNIEnv *env;
+    if (cb_attached == false) {
+        (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+        pthread_setspecific(ctx->env_key, (void *)env);
+    } else {
+        env = pthread_getspecific(ctx->env_key);
+    }
+    (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_sync, state);
+}
+
+void jni_update_stats(const struct FDMDV_STATS *stats) {
+    JNIEnv *env;
+    if (cb_attached == false) {
+        (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+        pthread_setspecific(ctx->env_key, (void *)env);
+    } else {
+        env = pthread_getspecific(ctx->env_key);
+    }
+    float s[2] = {stats->foff, stats->rx_timing};
+
+    jbyteArray dataArray = (*env)->NewByteArray(env, sizeof(s)*2);
+    (*env)->SetByteArrayRegion(env, dataArray, 0, sizeof(float)*2,
+            (const jbyte *)stats);
+    (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_stats,
+            dataArray);
+    (*env)->DeleteLocalRef(env, dataArray);
+}
+
 
 JNIEXPORT jboolean JNICALL
 Java_au_id_jms_freedvdroid_Freedv_setup(JNIEnv *env, jclass class,
@@ -163,6 +215,7 @@ JNIEXPORT jboolean JNICALL
 Java_au_id_jms_freedvdroid_Freedv_close(JNIEnv *env, jclass class) {
     // Stop thread
     ctx->usb_thread_run = false;
+    cb_attached = false;
     if (pthread_join(ctx->usb_thread, NULL) < 0) {
         LOGE("Could not join usb_thread");
     }

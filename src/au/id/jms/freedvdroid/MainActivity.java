@@ -1,5 +1,6 @@
 package au.id.jms.freedvdroid;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -11,21 +12,33 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import au.id.jms.graphview.GraphView;
+import au.id.jms.graphview.GraphView.GraphViewData;
+import au.id.jms.graphview.GraphView.GraphViewSeries;
+import au.id.jms.graphview.GraphView.GraphViewStyle;
+import au.id.jms.graphview.LineGraphView;
 
 public class MainActivity extends Activity {
 	
 	private static final String TAG = "UsbAudio";
 	
     private static final String ACTION_USB_PERMISSION = "au.id.jms.freedvdroid.USB_PERMISSION";
+
+	private static final int HISTORY_SIZE = 200;
     PendingIntent mPermissionIntent = null;
     UsbManager mUsbManager = null;
     UsbDevice mAudioDevice = null;
@@ -38,6 +51,14 @@ public class MainActivity extends Activity {
 
 	private AudioPlayback mAudioPlayback;
 
+	private static Handler mSyncHandler;
+	private static Handler mStatsHandler;
+	
+	private int graphOffsetX;
+	private GraphView freqOffsetGraphView;
+	private ArrayList<GraphViewData> freqOffsetData;
+	private GraphViewSeries freqOffsetSeries;
+	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,9 +83,25 @@ public class MainActivity extends Activity {
         System.loadLibrary("usb-1.0");
         UsbHelper.useContext(getApplicationContext());
         
+		mSyncHandler = new Handler() {
+			@Override
+			public void handleMessage(Message msg) {
+				updateSyncState((Boolean) msg.obj);
+			}
+		};
+		mStatsHandler = new Handler() {
+			@Override
+			public void handleMessage(Message msg) {
+				FdmdvStats stats = (FdmdvStats) msg.obj;
+				updateStatsGraph(stats);
+			}
+		};
+		
+		freqOffsetGraphView = new LineGraphView(this, "Frequency Estimation");
+		((LinearLayout) findViewById(R.id.graph1)).addView(freqOffsetGraphView);
+        
     	mUsbAudio = new Freedv();
-    	mAudioPlayback = new AudioPlayback();
-    	mAudioPlayback.setup();
+    	mAudioPlayback = new AudioPlayback(mSyncHandler, mStatsHandler);
     	
     	// Buttons
 		final Button startButton = (Button) findViewById(R.id.button1);
@@ -74,12 +111,21 @@ public class MainActivity extends Activity {
 		stopButton.setEnabled(false);
 		
 		startButton.setOnClickListener(new View.OnClickListener() {
+
 			public void onClick(View v) {
 				Log.d(TAG, "Start pressed");
 		    	if (mUsbAudio.setup(mAudioPlayback) == true) {
-		    		mAudioPlayback.setup();
+		        	mAudioPlayback.setup();
 		    		startButton.setEnabled(false);
 		    		stopButton.setEnabled(true);
+		    		
+					graphOffsetX = 0;
+					
+					Log.d(TAG, "Graph setup");
+					freqOffsetData = new ArrayList<GraphViewData>(HISTORY_SIZE); 
+			        freqOffsetSeries = new GraphViewSeries("Frequency",
+			        		new GraphViewStyle(Color.rgb(200, 50, 00), 3), freqOffsetData);
+			        freqOffsetGraphView.addSeries(freqOffsetSeries);
 		    	}
 			}
 		});
@@ -89,6 +135,11 @@ public class MainActivity extends Activity {
 				Log.d(TAG, "Stop pressed");
 		    	mUsbAudio.close();
 		    	mAudioPlayback.pause();
+		    	
+				// Clear graph
+		        freqOffsetGraphView.removeSeries(freqOffsetSeries);
+		        freqOffsetData = null;
+		        freqOffsetSeries = null;
 		    	
 	    		startButton.setEnabled(true);
 	    		stopButton.setEnabled(false);
@@ -107,6 +158,28 @@ public class MainActivity extends Activity {
         } else {
         	Log.e(TAG, "Device not present? Can't request peremission");
         }
+    }
+    
+    public void updateSyncState(boolean state) {
+    	RadioButton r = (RadioButton) findViewById(R.id.radioButton1);
+    	r.setChecked(state);
+    }
+    
+    public void updateStatsGraph(FdmdvStats stats) {
+    	if (freqOffsetSeries != null) { 
+    		while (freqOffsetSeries.getItemCount() > HISTORY_SIZE) {
+    			freqOffsetSeries.removeValue();
+    		}
+    		freqOffsetSeries.addValue(new GraphViewData(graphOffsetX, stats.freqOffEstHz));
+    		graphOffsetX++;
+
+    		// YAARRR, Here be hacks.
+    		// Need to work out how to force a redraw code to be called without removing and 
+    		// re-adding the view.
+    		LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
+    		layout.removeView(freqOffsetGraphView);
+    		layout.addView(freqOffsetGraphView);
+    	}
     }
     
     @Override

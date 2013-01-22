@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <samplerate.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "codec2_fdmdv.h"
 #include "codec2.h"
@@ -78,6 +79,7 @@ struct CODEC2 *codec2;
 SRC_STATE *insrc1;
 
 struct FDMDV_STATS stats;
+int count;
 //struct VARICODE_DEC  g_varicode_dec_states;
 
 pthread_mutex_t mutex;
@@ -219,6 +221,9 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
         fdmdv_get_rx_spectrum(fdmdv, rx_spec, rx_fdm, nin_prev);
 #endif
         fdmdv_get_demod_stats(fdmdv, &stats);
+        if (count % 10 == 0)
+            jni_update_stats(&stats);
+        count++;
 
         /* 
            State machine to:
@@ -237,12 +242,14 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
         case 0:
             /* mute output audio when out of sync */
 
-//            if (*n_output_buf < 2*codec2_samples_per_frame(codec2) - N8) {
+            if (*n_output_buf < 2*codec2_samples_per_frame(codec2) - N8) {
                 for(i=0; i<N8; i++)
                     output_buf[*n_output_buf + i] = 0;
                 *n_output_buf += N8;
-//            }
-            assert(*n_output_buf <= (2*codec2_samples_per_frame(codec2)));  
+            }
+            if (!(*n_output_buf <= (2*codec2_samples_per_frame(codec2)))) {
+                LOGE("*n_output_buf <= (2*codec2_samples_per_frame(codec2))");
+            }
 
             if ((stats.fest_coarse_fine == 1))// && (stats.snr_est > 3.0))
                 next_state = 1;
@@ -318,6 +325,9 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
             }
             break;
         }
+        if (!!g_state != !!next_state) {
+            jni_update_sync(g_state == 0);
+        }
         g_state = next_state;
     }
 }
@@ -364,15 +374,29 @@ int decode_file(short *recv, int len) {
 
     int shorts_in_buffer = len / 2;
     short buf8k[N48*2];
-    short buf48k[960];
+    short *buf48k = malloc(shorts_in_buffer *sizeof(short));
 
+    short *end = recv + len;
     for(i = 0; i < shorts_in_buffer; i++, recv += 2) {
+        if (recv > end)
+            LOGD("WTF");
         buf48k[i] = *recv;
     }
     int shorts_in_8kbuf = resample_48k_to_8k(buf8k, buf48k, N48*2, i);
+    free(buf48k);
+    if (!(shorts_in_8kbuf >= FDMDV_NOM_SAMPLES_PER_FRAME)) {
+        LOGD("Shorts in 8k: %d\t shorts_in_buffer: %d\t i: %d",
+                shorts_in_8kbuf, shorts_in_buffer, i);
+        LOGD("shorts_in_8kbuf (%d) >= FDMDV_NOM_SAMPLES_PER_FRAME (%d)",
+                shorts_in_8kbuf, FDMDV_NOM_SAMPLES_PER_FRAME);
+    }
     assert(shorts_in_8kbuf >= FDMDV_NOM_SAMPLES_PER_FRAME);
 
     /* Copy NOM_SAMPLES of shorts into &input_buf[n_input_buf] */
+    if (!(n_input_buf < FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short))) {
+        LOGD("n_input_buf: %d\n", n_input_buf);
+    }
+    assert(n_input_buf < FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short));
     memcpy(&input_buf[n_input_buf], buf8k,
             FDMDV_NOM_SAMPLES_PER_FRAME*sizeof(short));
     n_input_buf += FDMDV_NOM_SAMPLES_PER_FRAME;
@@ -384,7 +408,7 @@ int decode_file(short *recv, int len) {
     if (n_output_buf > N8) {
         jni_cb(output_buf, N8*sizeof(short));
 
-        n_output_buf -= N8;;
+        n_output_buf -= N8;
         assert(n_output_buf >= 0);
 
         /* shift speech sample output buffer */
