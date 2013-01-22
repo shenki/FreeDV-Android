@@ -17,16 +17,17 @@ public class ScatterGraphView extends View {
 	private static final String TAG = "ScatterGraphView";
 	Paint paint;
 	LinkedList<Coord>mPointList = new LinkedList<Coord>();
-	private int xOffset = 0;
-	private int yOffset = 0;
+	private int mWidth = 100;
+	private int mHeight = 100;
+
+	private static final float BETA = 0.95f;
+	private float mFilter = 0.1f;
 	
 	private class Coord {
 		public float x, y;
-		private final int SCALE = 100;
 		Coord(float x, float y) {
-			// Not doing abs here - should I?
-			this.x = SCALE * Math.abs(x) + 100;
-			this.y = SCALE * Math.abs(y) + 100;
+			this.x = x;
+			this.y = y;
 		}
 	}
 
@@ -44,8 +45,8 @@ public class ScatterGraphView extends View {
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 		super.onSizeChanged(w, h, oldw, oldh);
 		Log.d(TAG, "Width: " + h + " Height: " + w);
-		xOffset = (int)(w/3.5);
-		yOffset = (int)(h/3.5);
+		mWidth = w;
+		mHeight = h;
 	}
 	
 	public void addPoint(float[] newPoints) {
@@ -72,10 +73,25 @@ public class ScatterGraphView extends View {
 		paint.setAntiAlias(true);
 		paint.setColor(Color.BLUE);
 		
-		canvas.drawCircle(50, 50, POINT_RADIUS, paint);
+		// Filter points - this could go where the points are added if
+		// proves to be too costly to do in onDraw
+		float max = 1e-12f;
+		for (Coord c: mPointList) {
+			max = Math.min(max, Math.abs(c.x));
+			max = Math.min(max, Math.abs(c.y));
+		}
+		mFilter = Math.max(0.001f, BETA*mFilter + (1- BETA)*2.5f*max);
+
+		// 10000 is a magic factor to make the plot fit on the screen.
+		// TODO: Work out if the scale changes much between radios, and if not,
+		// use a constant. 36 works for the laptop with the vk5qi test file.
+		float x_scale = mWidth/mFilter / 10000;
+		float y_scale = mHeight/mFilter / 10000;
 		
 		for (Coord c: mPointList) {
-			canvas.drawCircle(c.x, c.y, POINT_RADIUS, paint);
+			float x = x_scale*c.x + mWidth/2;
+			float y = y_scale*c.y + mHeight/2;
+			canvas.drawCircle(x, y, POINT_RADIUS, paint);
 		}
 	}
 	

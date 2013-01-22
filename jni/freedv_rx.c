@@ -221,8 +221,7 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
         fdmdv_get_rx_spectrum(fdmdv, rx_spec, rx_fdm, nin_prev);
 #endif
         fdmdv_get_demod_stats(fdmdv, &stats);
-//        if (count % 10 == 0)
-            jni_update_stats(&stats);
+        jni_update_stats(&stats);
         count++;
 
         /* 
