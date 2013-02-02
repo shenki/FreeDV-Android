@@ -235,16 +235,16 @@ abstract public class GraphView extends LinearLayout {
 				}
 			}
 			
-			if (maxValueY == Double.MIN_VALUE) {
-				Log.e(TAG, "maxValueY was not changed");
-			} else if (minValueY == Double.MAX_VALUE) {
-				Log.e(TAG, "minValueY was not changed");
-			}
-			if (maxValueX == Double.MIN_VALUE) {
-				Log.e(TAG, "maxValueX was not changed");
-			} else if (minValueX == Double.MAX_VALUE) {
-				Log.e(TAG, "minValueX was not changed");
-			}
+//			if (maxValueY == Double.MIN_VALUE) {
+//				Log.e(TAG, "maxValueY was not changed");
+//			} else if (minValueY == Double.MAX_VALUE) {
+//				Log.e(TAG, "minValueY was not changed");
+//			}
+//			if (maxValueX == Double.MIN_VALUE) {
+//				Log.e(TAG, "maxValueX was not changed");
+//			} else if (minValueX == Double.MAX_VALUE) {
+//				Log.e(TAG, "minValueX was not changed");
+//			}
 		}
 		/**
 		 * Remove the first value from the series.
@@ -503,9 +503,9 @@ abstract public class GraphView extends LinearLayout {
 				highest = Math.max(series.maxValueX, highest);
 			}
 			
-			if (graphSeries.isEmpty() == false && highest == Double.MIN_VALUE) {
-				Log.e(TAG, "maxValueX caluclated wrong");
-			}
+//			if (graphSeries.isEmpty() == false && highest == Double.MIN_VALUE) {
+//				Log.e(TAG, "maxValueX caluclated wrong");
+//			}
 			return highest;
 		}
 	}
