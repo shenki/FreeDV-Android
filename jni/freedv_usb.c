@@ -92,10 +92,16 @@ int usb_setup(void) {
 
 	devh = libusb_open_device_with_vid_pid(NULL, VID, PID);
 	if (!devh) {
-		LOGE("libusb_open_device_with_vid_pid failed.\n");
-        rc = -1;
-        goto out;
-	}
+		LOGE("libusb_open_device_with_vid_pid (%04x) failed.\n", PID);
+
+        /* Try opening Mark's rigblaster. */
+        devh = libusb_open_device_with_vid_pid(NULL, VID, 0x2904);
+        if (!devh) {
+            LOGE("libusb_open_device_with_vid_pid (0x2904) failed.\n");
+            rc = -1;
+            goto out;
+        }
+    }
 
     rc = libusb_kernel_driver_active(devh, IFACE_NUM);
     if (rc == 1) {
