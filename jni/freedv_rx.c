@@ -78,6 +78,7 @@ struct CODEC2 *codec2;
 
 SRC_STATE *insrc1;
 
+float g_avmag[FDMDV_NSPEC];
 struct FDMDV_STATS stats;
 int count;
 //struct VARICODE_DEC  g_varicode_dec_states;
@@ -215,13 +216,18 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
         for(i=0; i<*n_input_buf; i++)
             input_buf[i] = input_buf[i+nin_prev];
 
-#if 0
         // compute rx spectrum & get demod stats, and update GUI plot data
 
         fdmdv_get_rx_spectrum(fdmdv, rx_spec, rx_fdm, nin_prev);
-#endif
+
+        // Average rx spectrum data using a simple IIR low pass filter
+        for(i = 0; i < FDMDV_NSPEC; i++) 
+        {
+            g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
+        }
+
         fdmdv_get_demod_stats(fdmdv, &stats);
-        jni_update_stats(&stats);
+        jni_update_stats(&stats, g_avmag);
         count++;
 
         /* 

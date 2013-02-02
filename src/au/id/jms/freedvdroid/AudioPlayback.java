@@ -53,9 +53,8 @@ public class AudioPlayback {
         mSyncHandler.obtainMessage(1, sync).sendToTarget();
 	}
 	
-	public void stats(float[] stats) {
-		float[] symbols = java.util.Arrays.copyOfRange(stats, 2, 32);
-		FdmdvStats s = new FdmdvStats(stats[0], stats[1], symbols);
+	public void stats(float foff, float rxTiming,  float[] symbols, float[] spectrum) {
+		FdmdvStats s = new FdmdvStats(foff, rxTiming, symbols, spectrum);
         mStatsHandler.obtainMessage(1, s).sendToTarget();
 	}
 }

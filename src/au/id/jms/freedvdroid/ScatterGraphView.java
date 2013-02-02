@@ -13,7 +13,7 @@ import android.view.View;
 public class ScatterGraphView extends View {
 	
 	private static final int NUM_POINTS = 60;
-	private static final float POINT_RADIUS = 2;
+	private static float POINT_RADIUS = 2;
 	private static final String TAG = "ScatterGraphView";
 	Paint paint;
 	LinkedList<Coord>mPointList = new LinkedList<Coord>();
@@ -47,6 +47,9 @@ public class ScatterGraphView extends View {
 		Log.d(TAG, "Width: " + h + " Height: " + w);
 		mWidth = w;
 		mHeight = h;
+		if (w > 400) {
+			POINT_RADIUS = 8;
+		}
 	}
 	
 	public void addPoint(float[] newPoints) {

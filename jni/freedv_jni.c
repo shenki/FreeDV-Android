@@ -94,7 +94,7 @@ int init_jni_cb(JNIEnv *env, jobject audioPlayback) {
         return -1;
     }
     AudioPlayback_stats = (*env)->GetMethodID(env, AudioPlayback, "stats",
-            "([F)V");
+            "(FF[F[F)V");
     if (!AudioPlayback_sync) {
         LOGE("Could not find au.id.jms.freedvdroid.AudioPlayback.stats()");
         (*env)->DeleteGlobalRef(env, AudioPlayback);
@@ -140,7 +140,7 @@ void jni_update_sync(bool state) {
 }
 
 
-void jni_update_stats(const struct FDMDV_STATS *stats) {
+void jni_update_stats(const struct FDMDV_STATS *stats, const float *spectrum) {
     JNIEnv *env;
     if (cb_attached == false) {
         (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
@@ -158,17 +158,21 @@ void jni_update_stats(const struct FDMDV_STATS *stats) {
      * float clock_offset - Estimated tx/rx sample clock offset in ppm
     */
 
-    assert(sizeof(stats->rx_symbols) == 15*2);
-    float s[2+15*2];
-    s[0] = stats->foff;
-    s[1] = stats->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME;
-    memcpy(&s[2], stats->rx_symbols, sizeof(stats->rx_symbols));
+    /* Should size be the number of floats, or number of bytes? */
+    /* Using numbero f floats. COMP is two floats big. */
+    jfloatArray symbolArray = (*env)->NewFloatArray(env, 2*FDMDV_NSYM);
+    (*env)->SetFloatArrayRegion(env, symbolArray, 0, 2*FDMDV_NSYM,
+            (float *)stats->rx_symbols);
 
-    jfloatArray dataArray = (*env)->NewFloatArray(env, sizeof(s));
-    (*env)->SetFloatArrayRegion(env, dataArray, 0, sizeof(s), s);
+    jfloatArray specArray = (*env)->NewFloatArray(env, FDMDV_NSPEC);
+    (*env)->SetFloatArrayRegion(env, specArray, 0, FDMDV_NSPEC, spectrum);
+
     (*env)->CallVoidMethod(env, audioPlaybackObj, AudioPlayback_stats,
-            dataArray);
-    (*env)->DeleteLocalRef(env, dataArray);
+            stats->foff, stats->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME,
+            symbolArray, specArray);
+
+    (*env)->DeleteLocalRef(env, symbolArray);
+    (*env)->DeleteLocalRef(env, specArray);
 }
 
 
