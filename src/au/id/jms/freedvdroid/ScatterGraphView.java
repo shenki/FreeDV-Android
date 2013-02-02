@@ -80,16 +80,13 @@ public class ScatterGraphView extends View {
 		// proves to be too costly to do in onDraw
 		float max = 1e-12f;
 		for (Coord c: mPointList) {
-			max = Math.min(max, Math.abs(c.x));
-			max = Math.min(max, Math.abs(c.y));
+			max = Math.max(max, Math.abs(c.x));
+			max = Math.max(max, Math.abs(c.y));
 		}
 		mFilter = Math.max(0.001f, BETA*mFilter + (1- BETA)*2.5f*max);
 
-		// 10000 is a magic factor to make the plot fit on the screen.
-		// TODO: Work out if the scale changes much between radios, and if not,
-		// use a constant. 36 works for the laptop with the vk5qi test file.
-		float x_scale = mWidth/mFilter / 10000;
-		float y_scale = mHeight/mFilter / 10000;
+		float x_scale = mWidth/mFilter;
+		float y_scale = mHeight/mFilter;
 		
 		for (Coord c: mPointList) {
 			float x = x_scale*c.x + mWidth/2;
