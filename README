@@ -1,0 +1,36 @@
+FreeDV for Android
+==================
+
+December 2012 Joel Stanley <joel@jms.id.au>
+
+This application is for using FreeDV on Android.
+
+From FreeDV.org:
+
+ > FreeDV is a GUI application for Windows and Linux (MacOS and BSD are in
+ > testing) that allows any SSB radio to be used for low bit rate digital voice.
+ >
+ > Speech is compressed down to 1400 bit/s then modulated onto a 1100 Hz wide QPSK
+ > signal which is sent to the Mic input of a SSB radio. On receive, the signal is
+ > received by the SSB radio, then demodulated and decoded by FreeDV.
+ >
+ > FreeDV was built by an international team of Radio Amateurs working together on
+ > coding, design, user interface and testing. FreeDV is open source software,
+ > released under the GNU Public License version 2.1. The FDMDV modem and Codec 2
+ > Speech codec used in FreeDV are also open source.
+
+Limitations
+-----------
+FreeDV on Android is currently receive only.
+
+Hardware Requirements
+---------------------
+The application requires a USB Audio Class Device to be attached to the USB
+port of a host-mode capable Android device, running Android 3.2 (API 13) or
+above.
+
+Software Requirements
+---------------------
+Native code was tested using version 0.8d of the Android NDK, building for
+ARMv7 processors with NEON. The application can be built against Android 4.2,
+targeting API 17 with minimum of 14 (Android 4.0), under Eclipse.

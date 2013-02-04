@@ -1,0 +1,43 @@
+Copyright 2013 Joel Stanley <joel@jms.id.au>
+
+FreeDV for Android is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3 of the License.
+
+This application uses code from other open source libraries. The licence
+information appears below:
+
+Files under jni/freedv from the FreeDV project:
+
+ Copyright (C) 2010 David Rowe
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License version 2.1, as
+ published by the Free Software Foundation.
+
+Files under jni/libsamplerate from http://www.mega-nerd.com/SRC:
+
+ Copyright (C) 2007-2011 Erik de Castro Lopo <erikd@mega-nerd.com>
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+
+Files under jni/libusb:
+
+ This is a pre-compiled version of libusb-android, from https://github.com/SpecLad/libusb-android.git
+ The Android modifications are Copyright (c) 2012 Roman Donchenko <roman.donchenko@itseez.com>
+
+ Copyright (C) 2007-2009 Daniel Drake <dsd@gentoo.org>
+ Copyright (c) 2001 Johannes Erdfelt <johannes@erdfelt.com>
+ Copyright (C) 2008-2012 Nathan Hjelm <hjelmn@users.sourceforge.net>
+ Copyright (C) 2009-2012 Pete Batard <pete@akeo.ie>
+ Copyright (C) 2010 Michael Plante <michael.plante@gmail.com>
+ Copyright (C) 2010-2012 Peter Stuge <peter@stuge.se>
+ Copyright (C) 2011-2012 Hans de Goede <hdegoede@redhat.com>
+ Copyright (C) 2012 Martin Pieuchot <mpi@openbsd.org>
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License version 2.1, as
+ published by the Free Software Foundation.
