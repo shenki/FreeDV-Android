@@ -22,10 +22,14 @@
 #include <assert.h>
 
 #include <libusb.h>
-#include <codec2_fdmdv.h>
 
 #include <jni.h>
 #include <android/log.h>
+
+#include "freedv_usb.h"
+#include "freedv_rx.h"
+
+#include "freedv_jni.h"
 
 #define UNUSED __attribute__((unused))
 
@@ -112,7 +116,7 @@ static void destroy_jni_cb(void* data) {
     }
 }
 
-void jni_cb(const jbyte *data, int len) {
+void jni_cb(const signed char *data, int len) {
     JNIEnv *env;
     if (cb_attached == false) {
         (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);

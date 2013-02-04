@@ -1,15 +1,10 @@
 /*
-  fl_fdmdv.cxx
-  Created 14 June 2012
-  David Rowe
-
-  Fltk 1.3 based GUI program to prototype FDMDV & Codec 2 integration
-  issues such as:
-
-    + spectrum, waterfall, and other FDMDV GUI displays
-    + integration with real time audio I/O using portaudio
-    + what we do with audio when out of sync
-*/
+ * Copyright 2013 Joel Stanley <joel@jms.id.au>
+ * Copyright 2012 David Rowe <david@rowetel.com>
+ *
+ * FreeDV fdmdv/codec2 decoding loop.
+ *
+ */
 
 #include <assert.h>
 #include <stdlib.h>
@@ -21,9 +16,11 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#include "codec2_fdmdv.h"
-#include "codec2.h"
-//#include "varicode.h"
+#include <codec2_fdmdv.h>
+#include <codec2.h>
+#include <varicode.h>
+
+#include "freedv_jni.h"
 
 #include <android/log.h>
 #define LOGD(...) \
@@ -81,7 +78,7 @@ SRC_STATE *insrc1;
 float g_avmag[FDMDV_NSPEC];
 struct FDMDV_STATS stats;
 int count;
-//struct VARICODE_DEC  g_varicode_dec_states;
+struct VARICODE_DEC  g_varicode_dec_states;
 
 pthread_mutex_t mutex;
 
@@ -94,13 +91,6 @@ short *output_buf;
 int    n_output_buf = 0;
 int    codec_bits[2*FDMDV_BITS_PER_FRAME];
 int    g_state = 0;
-
-// Portaudio states -----------------------------
-
-typedef struct {
-    float               in48k[FDMDV_OS_TAPS + N48];
-    float               in8k[MEM8 + N8];
-} paCallBackData;
 
 /*------------------------------------------------------------------*\
 
@@ -179,8 +169,8 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
     int    i, nin_prev, bit, byte;
     int    next_state;
 
-    assert(*n_input_buf <= (2*FDMDV_NOM_SAMPLES_PER_FRAME));    
-   
+    assert(*n_input_buf <= (2*FDMDV_NOM_SAMPLES_PER_FRAME));
+
     /*
       This while loop will run the demod 0, 1 (nominal) or 2 times:
 
@@ -284,9 +274,9 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
             if (sync_bit == 1) {
                 /* second half of frame of codec bits */
 
-                memcpy(&codec_bits[FDMDV_BITS_PER_FRAME], rx_bits, FDMDV_BITS_PER_FRAME*sizeof(int));
+                memcpy(&codec_bits[FDMDV_BITS_PER_FRAME], rx_bits,
+                        FDMDV_BITS_PER_FRAME*sizeof(int));
 
-#if 0
                 // extract data bit
 
                 int data_flag_index = codec2_get_spare_bit_index(codec2);
@@ -295,14 +285,16 @@ void per_frame_rx_processing(short  output_buf[], /* output buf of decoded speec
                 short abit = codec_bits[data_flag_index];
                 char  ascii_out;
 
-                int n_ascii = varicode_decode(&g_varicode_dec_states, &ascii_out, &abit, 1, 1);
+                int n_ascii = varicode_decode(&g_varicode_dec_states,
+                        &ascii_out, &abit, 1, 1);
                 assert((n_ascii == 0) || (n_ascii == 1));
                 if (n_ascii) {
                     short ashort = ascii_out;
-                    LOGE("%c", ashort);
+                    LOGD("%c", ashort);
                 }
-#endif
-                // reconstruct missing bit we steal for data bit and decode speech
+
+                // reconstruct missing bit we steal for data bit and decode
+                // speech
                 codec2_rebuild_spare_bit(codec2, codec_bits);
 
                 /* pack bits, MSB received first  */
@@ -371,7 +363,7 @@ int resample_48k_to_8k(
     return src_data.output_frames_gen;
 }
 
-int decode_file(short *buf_48k_stereo, int num_bytes_48k_stereo) {
+int rx_decode_buffer(const short *buf_48k_stereo, int num_bytes_48k_stereo) {
 
     pthread_mutex_lock(&mutex);
     int ret = 0, i;
@@ -387,7 +379,7 @@ int decode_file(short *buf_48k_stereo, int num_bytes_48k_stereo) {
     for(i = 0; i < num_shorts_48k_mono; i++, buf_48k_stereo += 2) {
         buf_48k_mono[i] = *buf_48k_stereo;
     }
-    int shorts_in_8kbuf = resample_48k_to_8k(buf_8k_mono, buf_48k_mono, N48*2, i);
+    resample_48k_to_8k(buf_8k_mono, buf_48k_mono, N48*2, i);
     assert(shorts_in_8kbuf >= FDMDV_NOM_SAMPLES_PER_FRAME);
 
     /* Copy NOM_SAMPLES of shorts into &input_buf[n_input_buf] */
@@ -400,7 +392,7 @@ int decode_file(short *buf_48k_stereo, int num_bytes_48k_stereo) {
             input_buf, &n_input_buf);
 
     if (n_output_buf > N8) {
-        jni_cb(output_buf, N8*sizeof(short));
+        jni_cb((signed char *)output_buf, N8*sizeof(short));
 
         n_output_buf -= N8;
         assert(n_output_buf >= 0);

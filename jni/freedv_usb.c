@@ -18,6 +18,8 @@
 
 #include <libusb.h>
 
+#include "freedv_rx.h"
+
 /* TI PCM2900C Audio CODEC default VID/PID. */
 #define VID 0x08bb
 #define PID 0x29c0
@@ -73,7 +75,7 @@ static void transfer_cb(struct libusb_transfer *xfr) {
     /* At this point, recv points to a buffer containing len bytes of audio. */
 
     /* Call freedv. */
-    decode_file(recv, len);
+    rx_decode_buffer((short *)recv, len);
     free(recv);
 	if ((rc = libusb_submit_transfer(xfr)) < 0) {
 		LOGE("libusb_submit_transfer: %s.\n", libusb_error_name(rc));

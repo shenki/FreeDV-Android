@@ -27,7 +27,7 @@ LOCAL_SRC_FILES := freedv/codebook.c freedv/codebookd.c freedv/codebookdt.c \
     freedv/codebookvqanssi.c freedv/codebookvq.c freedv/codec2.c \
     freedv/comp.c freedv/fdmdv.c freedv/interp.c freedv/kiss_fft.c \
     freedv/lpc.c freedv/lsp.c freedv/nlp.c freedv/pack.c freedv/phase.c \
-    freedv/postfilter.c freedv/quantise.c freedv/sine.c
+    freedv/postfilter.c freedv/quantise.c freedv/sine.c freedv/varicode.c
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
